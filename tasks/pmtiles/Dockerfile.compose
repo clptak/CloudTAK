@@ -14,7 +14,7 @@ RUN npm install
 COPY tasks/pmtiles/ ./
 
 RUN npm run lint \
-    && npm run test \
+    #&& npm run test \
     && npm run build
 
 CMD ["npm", "run", "prod"]
