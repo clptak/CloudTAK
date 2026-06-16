@@ -10,6 +10,30 @@ const ALLOWED_METHODS = new Set(['GET', 'POST', 'PATCH', 'DELETE']);
 /** Paths under /api/locate allowed through the bridge (locator plugin surface). */
 const ALLOWED_SUBPATH = /^\/locators(?:\/[^/]+(?:\/(?:archive|reactivate|manual-ping|history|send-link-sms))?)?$/;
 
+export function getTakPortalPublicOrigin(): string | null {
+    const raw = String(process.env.TAK_PORTAL_PUBLIC_URL || '').trim();
+    if (!raw) return null;
+    try {
+        const u = new URL(raw);
+        return u.origin;
+    } catch {
+        return null;
+    }
+}
+
+export function applyPublicUrlForwardedHeaders(headers: Record<string, string>): void {
+    const raw = String(process.env.TAK_PORTAL_PUBLIC_URL || '').trim();
+    if (!raw) return;
+    try {
+        const u = new URL(raw);
+        headers['X-Forwarded-Proto'] = u.protocol.replace(':', '') || 'https';
+        headers['X-Forwarded-Host'] = u.host;
+        headers.Host = u.host;
+    } catch {
+        /* ignore invalid URL */
+    }
+}
+
 export function getTakPortalInternalBase(): string {
     return (process.env.TAK_PORTAL_INTERNAL_URL || 'http://tak-portal:3000').replace(/\/$/, '');
 }
@@ -78,6 +102,7 @@ export async function forwardTakPortalLocateRequest(input: {
     }
 
     const headers = buildAuthentikHeaders(input.profile);
+    applyPublicUrlForwardedHeaders(headers);
     if (input.contentType) {
         headers['Content-Type'] = input.contentType;
     }
