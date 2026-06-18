@@ -4,6 +4,36 @@ import vue from '@vitejs/plugin-vue'
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 const milsymbolBrowserBundle = path.resolve(__dirname, 'node_modules/milsymbol/dist/milsymbol.js');
+const webRoot = __dirname;
+
+/** Plugins symlinked to ~/dev/* resolve imports from the real path, not api/web/plugins/. */
+function symlinkedPluginResolve() {
+    const anchor = path.join(webRoot, 'src/main.ts');
+
+    return {
+        name: 'symlinked-plugin-resolve',
+        enforce: 'pre' as const,
+        async resolveId(source: string, importer: string | undefined) {
+            if (!importer?.includes('/dev/cloudtak-')) return null;
+
+            const srcMatch = source.match(/^((?:\.\.\/)+)src\/(.+)$/);
+            if (srcMatch) {
+                return path.resolve(webRoot, 'src', srcMatch[2]);
+            }
+
+            if (/^((?:\.\.\/)+)plugin\.ts$/.test(source)) {
+                return path.resolve(webRoot, 'plugin.ts');
+            }
+
+            if (!source.startsWith('.') && !source.startsWith('\0') && !source.includes(':')) {
+                const resolved = await this.resolve(source, anchor, { skipSelf: true });
+                if (resolved) return resolved;
+            }
+
+            return null;
+        },
+    };
+}
 
 export default defineConfig(({ mode }) => {
     return {
@@ -11,6 +41,7 @@ export default defineConfig(({ mode }) => {
             'import.meta.env.HASH': JSON.stringify(Math.random().toString(36).substring(2, 15)),
         },
         plugins: [
+            symlinkedPluginResolve(),
             vue(),
             {
                 name: 'configure-server',

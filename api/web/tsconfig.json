@@ -25,6 +25,7 @@
     // So here we enable some resolution features that are only available in bundlers.
     "moduleResolution": "bundler",
     "paths": {
+      "@/*": ["./src/*"],
       "@tak-ps/cloudtak": ["./plugin.ts"],
       "@cloudtak/api-types": ["../derived-types.d.ts"]
     },
