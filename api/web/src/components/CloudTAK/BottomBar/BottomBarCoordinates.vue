@@ -1,17 +1,17 @@
 <template>
     <div
-        v-if='displayCoord'
         class='position-relative text-white user-select-none border-start border-white border-opacity-25 px-2 py-1'
         style='width: clamp(220px, 26vw, 340px); min-width: 220px; max-width: 340px;'
     >
         <TablerDropdown
             class='h-100'
             position='top-end'
-            width='100%'
+            :width='240'
         >
             <template #default>
                 <div
-                    class='px-2 py-2 d-flex flex-column justify-content-center cursor-pointer cloudtak-hover h-100 pe-5'
+                    class='px-2 py-2 d-flex flex-column justify-content-center h-100'
+                    :class='isNative ? "" : "cursor-pointer cloudtak-hover pe-5"'
                 >
                     <span
                         class='d-block text-uppercase text-white-50'
@@ -25,7 +25,11 @@
             </template>
 
             <template #dropdown>
-                <li class='px-3 py-2'>
+                <li
+                    v-if='!isNative'
+                    class='px-3 py-2'
+                    @click.stop
+                >
                     <TablerPillGroup
                         :model-value='coordSource'
                         :options='sourceOptions'
@@ -33,7 +37,6 @@
                         :full-width='true'
                         :rounded='true'
                         padding='px-1 py-0'
-                        @click.stop
                         @update:model-value='coordSource = $event'
                     >
                         <template #option='{ option }'>
@@ -52,11 +55,27 @@
                     </TablerPillGroup>
                 </li>
                 <li
+                    v-if='mapStore.isMobileDetected && coordSource === "gps" && formattedCoord'
+                    class='px-3 py-2'
+                    @click='Clipboard.write({ string: formattedCoord })'
+                >
+                    <button
+                        type='button'
+                        class='btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2'
+                    >
+                        <IconCopy
+                            :size='16'
+                            stroke='1'
+                        />
+                        Copy Coordinates
+                    </button>
+                </li>
+                <li
                     v-for='mode in COORD_MODES'
                     :key='mode.value'
                     class='tabler-dropdown__item cloudtak-hover cursor-pointer px-3 py-2 text-body'
                     :class='{ "tabler-dropdown__item--active": mapStore.coordFormat === mode.value }'
-                    @click.stop='void setCoordFormat(mode.value)'
+                    @click='void setCoordFormat(mode.value)'
                 >
                     <span class='fw-semibold'>{{ mode.label }}</span>
                     <span class='text-secondary ms-2 small'>{{ mode.title }}</span>
@@ -65,7 +84,7 @@
         </TablerDropdown>
 
         <CopyButton
-            v-if='coordSource === "gps"'
+            v-if='coordSource === "gps" && !mapStore.isMobileDetected'
             v-tooltip='"Copy Coordinates"'
             :text='formattedCoord'
             class='position-absolute top-50 end-0 translate-middle-y me-2'
@@ -77,13 +96,16 @@
 
 <script setup lang='ts'>
 import { ref, computed } from 'vue';
+import { Clipboard } from '@capacitor/clipboard';
 import { TablerDropdown, TablerPillGroup } from '@tak-ps/vue-tabler';
 import {
+    IconCopy,
     IconCursorText,
     IconCurrentLocation
 } from '@tabler/icons-vue';
 import { formatCoordPair, COORD_MODES, type CoordMode } from '../../../base/utils/coordinateFormat.ts';
 import { useMapStore } from '../../../stores/map.ts';
+import { isNativePlatform } from '../../../base/capacitor.ts';
 import CopyButton from '../util/CopyButton.vue';
 
 const props = defineProps<{
@@ -92,7 +114,9 @@ const props = defineProps<{
 
 const mapStore = useMapStore();
 
-const coordSource = ref<string>('cursor');
+const isNative = isNativePlatform();
+
+const coordSource = ref<string>(isNative ? 'gps' : 'cursor');
 
 const sourceOptions = [
     { value: 'cursor', label: 'Cursor' },
@@ -103,6 +127,7 @@ const displayCoord = computed(() => {
     if (coordSource.value === 'gps') {
         return mapStore.gpsCoordinates;
     }
+
     return props.coord;
 });
 
@@ -115,7 +140,9 @@ async function setCoordFormat(mode: CoordMode): Promise<void> {
 
 const formattedCoord = computed(() => {
     const c = displayCoord.value;
-    if (!c) return '';
+
+    if (!c) return coordSource.value === 'cursor' ? 'Cursor Offscreen' : 'No GPS Fix';
+
     return formatCoordPair(
         c.lat,
         c.lng,

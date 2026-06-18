@@ -178,10 +178,13 @@
                     <PathBrowser
                         v-if='currentFolders.length'
                         :nodes='currentFolders'
+                        :visibility-toggle='true'
+                        :is-node-hidden='isFolderHidden'
                         @navigate='navigateToFolder'
                         @delete='deletePath'
                         @rename='openEditModal'
                         @folder-drop='onFolderDrop'
+                        @toggle-visibility='toggleFolderVisibility'
                     />
 
                     <div
@@ -197,6 +200,7 @@
                             :grip-handle='true'
                             :delete-button='true'
                             :info-button='true'
+                            :visibility-toggle='true'
                             :feature='cot'
                         />
                     </div>
@@ -241,10 +245,12 @@
 
 <script setup lang='ts'>
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount, useTemplateRef } from 'vue';
-import { Preferences } from '@capacitor/preferences';
 import COT from '../../../base/cot.ts';
+import FeatureManager from '../../../base/feature.ts';
+import type { Feature_ExportFormat } from '../../../base/feature.ts';
 import PathManager from '../../../base/path-manager.ts';
 import type { PathNode } from '../../../base/path-manager.ts';
+import { FeatureVisibility, GENERAL_SOURCE_ID } from '../../../stores/modules/feature-visibility.ts';
 import { useRouter } from 'vue-router';
 import MenuTemplate from '../util/MenuTemplate.vue';
 import SearchSortFilter from '../util/SearchSortFilter.vue';
@@ -263,7 +269,6 @@ import {
     TablerModal,
     TablerButton
 } from '@tak-ps/vue-tabler';
-import { std } from '../../../std.ts';
 import type { WorkerMessage } from '../../../base/events.ts';
 import { WorkerMessageType } from '../../../base/events.ts';
 import {
@@ -325,6 +330,14 @@ const currentFolders = computed(() => {
     const node = PathManager.findNode(paths.value, currentPath.value);
     return node ? node.children : [];
 });
+
+function isFolderHidden(node: PathNode<COT>): boolean {
+    return FeatureVisibility.isPathHidden(GENERAL_SOURCE_ID, node.fullPath);
+}
+
+function toggleFolderVisibility(node: PathNode<COT>): void {
+    FeatureVisibility.togglePath(GENERAL_SOURCE_ID, node.fullPath);
+}
 
 const folderModal = ref<{
     shown: boolean;
@@ -655,11 +668,8 @@ async function refresh(load = false): Promise<void> {
     })
 }
 
-async function download(format: string): Promise<void> {
-    const { value: token } = await Preferences.get({ key: 'token' });
-    await std(`/api/profile/feature?format=${format}&download=true${token ? `&token=${encodeURIComponent(token)}` : ''}`, {
-        download: true
-    });
+async function download(format: Feature_ExportFormat): Promise<void> {
+    await FeatureManager.download({ format });
 }
 
 async function navigateToFolder(node: PathNode<COT>): Promise<void> {
@@ -700,9 +710,7 @@ async function deleteFeatures(): Promise<void> {
             skipNetwork: true
         });
 
-        await std('/api/profile/feature', {
-            method: 'DELETE'
-        });
+        await FeatureManager.delete();
 
         loading.value = false;
     } catch (err) {
@@ -728,7 +736,9 @@ async function deletePath(node: PathNode<COT>): Promise<void> {
     // Delete COTs for this path and all descendant paths
     const allPaths = PathManager.flatPaths([node]);
     for (const p of allPaths) {
-        await mapStore.worker.db.filterRemove(`path = "${p}" and properties.archived`);
+        await FeatureManager.delete({ path: p, permanent: true });
+        const cots = await mapStore.worker.db.pathFeatures(p);
+        await Promise.allSettled([...cots].map((cot) => mapStore.worker.db.remove(cot.id, { skipNetwork: true })));
     }
 
     await refresh();

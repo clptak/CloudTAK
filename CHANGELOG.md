@@ -12,9 +12,42 @@
 
 ### Deprecation Notices
 
-None at this time, but any breaking changes will be prefaced with a deprecation notice in the previous major version to allow users to prepare for the change
+- `GET /api/search/reverse/:long/:lat` endpoint is deprecated and will be removed in v14, use `GET /api/search/reverse/:long/:lat/<type>` instead
 
 ### Pending Release
+
+### v13.18.1 - 2026-06-17
+
+- :bug: Ensure folder feature delete works correctly - Closes: https://github.com/dfpc-coe/CloudTAK/issues/1499
+- :bug: Fix track loading error - Closes: https://github.com/dfpc-coe/CloudTAK/issues/1503
+
+### v13.18.0 - 2026-06-16
+
+- :rocket: Migrate to use liveQuery for Mission Features - Closes: https://github.com/dfpc-coe/CloudTAK/issues/1495
+- :rocket: Introduce high level subscription_layers database
+- :rocket: Migrate Mission List to generic PathBrowser
+
+### v13.17.0 - 2026-06-15
+
+- :tada: First pass at unified feature API that inherits BaseInterface
+- :rocket: Rewrite to session handling to avoid nuking the database unless the user explicitly logs out.
+
+### v13.16.1 - 2026-06-14
+
+- :rocket: Hide cursor coordinates on mobile
+
+### v13.16.0 - 2026-06-14
+
+- :rocket: Redesign Menu System so that MenuTemplate owns the entire styling system including Modal creation. This leads to more compact menus when on mobile
+- :bug: Ensure scroll within menu can see all components - Ref: https://github.com/dfpc-coe/CloudTAK/issues/1491
+- :bug: Move Coordinate Copy into dropdown on mobile to ensure it can be clicked if on a phone with aggresive corner cutouts
+
+### v13.15.0 - 2026-06-13
+
+- :rocket: Add altitude accuracy, speed, bearing to Background Location API
+- :rocket: Seperate out reverse APIs to allow responses to return as they finish on the server instead of a single response type holding up then entire payload
+- :rocket: Add support for Rad Dose selection in the UI
+- :rocket: Redesign Callsign & Device Preferences and Display Preferences menus to use StandardItem and support auto-save
 
 ### v13.14.1 - 2026-06-13
 

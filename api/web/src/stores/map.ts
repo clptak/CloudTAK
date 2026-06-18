@@ -26,6 +26,7 @@ import { WorkerMessageType, LocationState } from '../base/events.ts';
 import type { WorkerMessage } from '../base/events.ts';
 import Overlay from '../base/overlay-class.ts';
 import OverlayManager from '../base/overlay.ts';
+import { FeatureVisibility } from './modules/feature-visibility.ts';
 import Subscription from '../base/subscription.ts';
 import { stdurl, server, getRuntimeToken, serverUrl } from '../std.js';
 import * as mapgl from 'maplibre-gl'
@@ -230,12 +231,20 @@ export const useMapStore = defineStore('cloudtak', {
                 if (this.manualLocationMode) return;
 
                 this.locationAccuracy = position.coords.accuracy;
+                this.gpsCoordinates = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
 
                 this.channel.postMessage({
                     type: WorkerMessageType.Profile_Location_Coordinates,
                     body: {
                         accuracy: position.coords.accuracy,
                         altitude: position.coords.altitude,
+                        altitudeAccuracy: position.coords.altitudeAccuracy,
+                        speed: position.coords.speed,
+                        heading: position.coords.heading,
+                        timestamp: position.timestamp,
                         coordinates: [ position.coords.longitude, position.coords.latitude ]
                     }
                 });
@@ -537,17 +546,27 @@ export const useMapStore = defineStore('cloudtak', {
             }
 
             const { value: token } = await Preferences.get({ key: 'token' });
-            const sub = await Subscription.load(guid, {
-                token: token || '',
-                reload: opts?.reload || false,
-                subscribed: true,
-                missiontoken: overlay.token || undefined
-            });
+
+            let sub: Subscription | null = null;
+            if (!opts?.reload) {
+                sub = (await Subscription.from(guid, token || '', { subscribed: true })) || null;
+            }
+
+            if (!sub) {
+                sub = await Subscription.load(guid, {
+                    token: token || '',
+                    reload: opts?.reload || false,
+                    subscribed: true,
+                    missiontoken: overlay.token || undefined
+                });
+            }
 
             // @ts-expect-error Source.setData is not defined
             oStore.setData(await sub.feature.collection(false));
 
-            await sub.update({ dirty: false });
+            if (sub.dirty) {
+                await sub.update({ dirty: false });
+            }
 
             return sub;
         },
@@ -818,6 +837,10 @@ export const useMapStore = defineStore('cloudtak', {
                     latitude: position.coords.latitude,
                     ...(position.coords.altitude !== null ? { altitude: position.coords.altitude } : {}),
                     accuracy: position.coords.accuracy,
+                    ...(position.coords.altitudeAccuracy !== null ? { altitudeAccuracy: position.coords.altitudeAccuracy } : {}),
+                    ...(position.coords.speed !== null ? { speed: position.coords.speed } : {}),
+                    ...(position.coords.heading !== null ? { bearing: position.coords.heading } : {}),
+                    time: position.timestamp,
                 };
 
                 // Use CapacitorHttp for native background requests to avoid WebView throttling
@@ -1072,6 +1095,8 @@ export const useMapStore = defineStore('cloudtak', {
             OverlayManager.clearLoaded();
             const profileOverlays = await OverlayManager.list({ localFirst: true });
 
+            await FeatureVisibility.load();
+
             const hasBasemap = profileOverlays.some((o: ProfileOverlay) => {
                 return o.mode === 'basemap'
             });
@@ -1165,6 +1190,8 @@ export const useMapStore = defineStore('cloudtak', {
                 name: 'Map Features',
                 type: 'geojson',
             }));
+
+            await FeatureVisibility.apply();
 
             // Data Syncs are specially loaded as they are dynamic
             // Mission loading is fire-and-forget so logs/changes/features
