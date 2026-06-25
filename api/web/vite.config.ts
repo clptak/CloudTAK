@@ -6,6 +6,27 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 const milsymbolBrowserBundle = path.resolve(__dirname, 'node_modules/milsymbol/dist/milsymbol.js');
 const webRoot = __dirname;
 
+function isDevPluginImporter(importer: string | undefined): boolean {
+    if (!importer) return false;
+    const file = importer.replace(/^virtual-module:/, '').split('?')[0];
+    return file.includes('/dev/cloudtak-');
+}
+
+function resolveSymlinkedHostImport(source: string, importer: string | undefined): string | null {
+    if (!isDevPluginImporter(importer)) return null;
+
+    const srcMatch = source.match(/^((?:\.\.\/)+)src\/(.+)$/);
+    if (srcMatch) {
+        return path.resolve(webRoot, 'src', srcMatch[2]);
+    }
+
+    if (/^((?:\.\.\/)+)plugin\.ts$/.test(source)) {
+        return path.resolve(webRoot, 'plugin.ts');
+    }
+
+    return null;
+}
+
 /** Plugins symlinked to ~/dev/* resolve imports from the real path, not api/web/plugins/. */
 function symlinkedPluginResolve() {
     const anchor = path.join(webRoot, 'src/main.ts');
@@ -14,18 +35,15 @@ function symlinkedPluginResolve() {
         name: 'symlinked-plugin-resolve',
         enforce: 'pre' as const,
         async resolveId(source: string, importer: string | undefined) {
-            if (!importer?.includes('/dev/cloudtak-')) return null;
+            const host = resolveSymlinkedHostImport(source, importer);
+            if (host) return host;
 
-            const srcMatch = source.match(/^((?:\.\.\/)+)src\/(.+)$/);
-            if (srcMatch) {
-                return path.resolve(webRoot, 'src', srcMatch[2]);
-            }
-
-            if (/^((?:\.\.\/)+)plugin\.ts$/.test(source)) {
-                return path.resolve(webRoot, 'plugin.ts');
-            }
-
-            if (!source.startsWith('.') && !source.startsWith('\0') && !source.includes(':')) {
+            if (
+                isDevPluginImporter(importer)
+                && !source.startsWith('.')
+                && !source.startsWith('\0')
+                && !source.includes(':')
+            ) {
                 const resolved = await this.resolve(source, anchor, { skipSelf: true });
                 if (resolved) return resolved;
             }
@@ -35,13 +53,34 @@ function symlinkedPluginResolve() {
     };
 }
 
+const symlinkedHostAlias = {
+    find: /^((?:\.\.\/)+)src\/(.+)$/,
+    replacement: '$2',
+    customResolver(source: string, importer: string | undefined) {
+        return resolveSymlinkedHostImport(source, importer) ?? undefined;
+    },
+};
+
+const symlinkedPluginAlias = {
+    find: /^((?:\.\.\/)+)plugin\.ts$/,
+    replacement: 'plugin.ts',
+    customResolver(source: string, importer: string | undefined) {
+        return resolveSymlinkedHostImport(source, importer) ?? undefined;
+    },
+};
+
 export default defineConfig(({ mode }) => {
+    const devSymlinkPluginResolve = mode === 'development' ? symlinkedPluginResolve() : null;
+    const devSymlinkAliases = mode === 'development'
+        ? [symlinkedHostAlias, symlinkedPluginAlias]
+        : [];
+
     return {
         define: {
             'import.meta.env.HASH': JSON.stringify(Math.random().toString(36).substring(2, 15)),
         },
         plugins: [
-            symlinkedPluginResolve(),
+            ...(devSymlinkPluginResolve ? [devSymlinkPluginResolve] : []),
             vue(),
             {
                 name: 'configure-server',
@@ -63,12 +102,13 @@ export default defineConfig(({ mode }) => {
             include: ["showdown", "@tak-ps/vue-tabler"],
         },
         resolve: {
-            alias: {
-                'milsymbol': milsymbolBrowserBundle,
-                '@tak-ps/cloudtak': path.resolve(__dirname, './plugin.ts'),
-                '@': path.resolve(__dirname, './src'),
-                '@cloudtak/api-types': path.resolve(__dirname, '../derived-types.d.ts'),
-            }
+            alias: [
+                ...devSymlinkAliases,
+                { find: 'milsymbol', replacement: milsymbolBrowserBundle },
+                { find: '@tak-ps/cloudtak', replacement: path.resolve(__dirname, './plugin.ts') },
+                { find: '@', replacement: path.resolve(__dirname, './src') },
+                { find: '@cloudtak/api-types', replacement: path.resolve(__dirname, '../derived-types.d.ts') },
+            ],
         },
         build: {
             manifest: true,
