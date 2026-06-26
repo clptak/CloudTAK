@@ -16,6 +16,46 @@
 
 ### Pending Release
 
+### v13.22.2 - 2026-06-25
+
+- :bug: Styled features are geojson features and should not have XML escaped characters in their human readable properties. This lead to a bug where CloudTAK would detect a mission change as the escaped XML did not match the unescaped XML returned by TAK server, resulting in a constant barrage of change messages.
+
+### v13.22.1 - 2026-06-25
+
+- :arrow_up: Update node-ssrf@1.5
+
+### v13.22.0 - 2026-06-25
+
+- :rocket: Allow an admin to puase the Admin Server Connection
+
+### v13.21.1 - 2026-06-24
+
+- :bug: Ensure DNS entries in the allow list are resolved to also allow their IPs
+- :bug: Ensure Data Sync list errors are cleared if the user refreshes
+
+### v13.21.0 - 2026-06-24
+
+- :bug: Ensure Welcome Banner can be set and closed
+
+### v13.20.0 - 2026-06-23
+
+- :tada: Allow Admin Connections to utilize connection APIs and have associated layers
+- :tada: Add UI and backend routes for supporting paging notification settings
+- :rocket: Update Capacitor Network
+- :rocket: Allow editing Mission Log keywords
+
+### v13.19.1 - 2026-06-22
+
+- :bug: Fix `vector_layers` field not being proxied for PMTiles Layers
+
+### v13.19.0 - 2026-06-21
+
+- :tada: Introduce Deleted Features retention policy
+- :rocket: Introduce database support for Overlay Parent relationships
+- :rocket: Rewrite Data Sync Log Keyword Component for more intuitive keyword additional and removal
+- :rocket: Use SearchSortFilter component for displaying Data Syncs and Logs
+- :rocket: Introduce AWS Mail Manager for outgoing email
+
 ### v13.18.1 - 2026-06-17
 
 - :bug: Ensure folder feature delete works correctly - Closes: https://github.com/dfpc-coe/CloudTAK/issues/1499

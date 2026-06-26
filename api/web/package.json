@@ -1,7 +1,7 @@
 {
     "name": "@tak-ps/cloudtak",
     "type": "module",
-    "version": "13.18.1",
+    "version": "13.22.2",
     "types": "dist/types/plugin.d.ts",
     "files": [
         "dist/types"
@@ -39,9 +39,12 @@
         "@capacitor/geolocation": "^8.1.0",
         "@capacitor/haptics": "^8.0.2",
         "@capacitor/keyboard": "^8.0.3",
+        "@capacitor/network": "^8.0.1",
         "@capacitor/preferences": "^8.0.1",
         "@capacitor/status-bar": "^8.0.2",
         "@capgo/background-geolocation": "^8.0.39",
+        "@fullcalendar/core": "^6.1.21",
+        "@fullcalendar/daygrid": "^6.1.21",
         "@mapbox/tile-cover": "^3.0.2",
         "@simplewebauthn/browser": "^13.3.0",
         "@tabler/core": "^1.4.0",
@@ -97,9 +100,7 @@
         "vue-component-type-helpers": "^3.0.7",
         "vue-mention": "^2.0.0-alpha.3",
         "vue-router": "^5.0.0",
-        "yaml": "^2.8.2",
-        "@fullcalendar/core": "^6.1.11",
-        "@fullcalendar/daygrid": "^6.1.11"
+        "yaml": "^2.8.2"
     },
     "devDependencies": {
         "@capacitor/cli": "^8.3.1",

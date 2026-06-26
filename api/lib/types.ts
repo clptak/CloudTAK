@@ -216,6 +216,7 @@ export const ServerResponse = Type.Object({
         Type.Literal('dead'),
         Type.Literal('unknown'),
     ], { default: 'unknown', description: 'The connected status of the Admin Connection (connection 0)' }),
+    connection: Type.Boolean({ default: true, description: 'Whether the Admin Connection (connection 0) is enabled in the connection pool' }),
     created: Type.String(),
     updated: Type.String(),
     version: Type.String(),
@@ -323,6 +324,18 @@ export const ProfileOverlayResponse = createSelectSchema(schemas.ProfileOverlay,
 export const ProfileInterestResponse = createSelectSchema(schemas.ProfileInterest, {
     id: Type.Integer(),
     bounds: Feature.Geometry,
+});
+
+/** seed is intentionally excluded — it must never be returned to the client */
+export const ProfilePagingResponse = Type.Object({
+    id: Type.Integer(),
+    username: Type.String(),
+    verified: Type.Boolean(),
+    enabled: Type.Boolean(),
+    type: Type.String(),
+    value: Type.String(),
+    created: Type.String(),
+    updated: Type.String(),
 });
 
 export const ProfileVideoResponse = createSelectSchema(schemas.ProfileVideo, {
@@ -510,6 +523,15 @@ export const FullConfig = Type.Object({
     'retention::chat::days': Type.Integer({ description: 'Number of days to retain chat messages', minimum: 1 }),
     'retention::import::enabled': Type.Boolean({ description: 'Enable retention processing for imports' }),
     'retention::import::days': Type.Integer({ description: 'Number of days to retain imports', minimum: 1 }),
+    'retention::feature::enabled': Type.Boolean({ description: 'Enable retention processing for recently deleted features' }),
+    'retention::feature::days': Type.Integer({ description: 'Number of days to retain recently deleted features', minimum: 1 }),
+    'notification::enabled': Type.Boolean({ description: 'Enable notification delivery' }),
+    'notification::email::enabled': Type.Boolean({ description: 'Enable email notifications' }),
+    'notification::email::service': Type.String({ description: 'Email notification delivery service', enum: ['aws'] }),
+    'notification::sms::enabled': Type.Boolean({ description: 'Enable SMS notifications' }),
+    'notification::sms::service': Type.String({ description: 'SMS notification delivery service', enum: ['aws'] }),
+    'notification::push::enabled': Type.Boolean({ description: 'Enable push notifications' }),
+    'notification::push::service': Type.String({ description: 'Push notification delivery service', enum: ['firebase'] }),
     'agol::enabled': Type.Boolean({ description: 'Enable ArcGIS Online Integration' }),
     'agol::auth_method': Type.String({ description: 'AGOL Auth Type', enum: ['oauth2', 'legacy'] }),
     'agol::token': Type.String({ description: 'AGOL Legacy Token' }),

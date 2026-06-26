@@ -308,11 +308,13 @@ export default class Subscription {
                 body: patch
             });
 
-            this.meta = data as unknown as Mission;
+            if (data) {
+                Object.assign(this.meta, data as unknown as Mission);
 
-            await db.subscription.update(this.guid, {
-                meta: JSON.parse(JSON.stringify(this.meta)),
-            });
+                await db.subscription.update(this.guid, {
+                    meta: JSON.parse(JSON.stringify(this.meta)),
+                });
+            }
         }
 
         this._sync.postMessage({
@@ -326,14 +328,14 @@ export default class Subscription {
     }
 
     async delete(): Promise<void> {
-        const { data } = await server.DELETE('/api/marti/missions/{:name}', {
+        const { data, response } = await server.DELETE('/api/marti/missions/{:name}', {
             params: {
                 path: { ':name': this.guid }
             },
             headers: Subscription.headers(this.missiontoken)
         });
 
-        if (!data) throw new Error('Mission Error');
+        if (!data && response.status !== 404) throw new Error('Mission Error');
 
         await db.subscription.delete(this.meta.guid);
 
@@ -359,7 +361,7 @@ export default class Subscription {
             .get(this.guid)
 
         if (exists) {
-            this.meta = exists.meta;
+            Object.assign(this.meta, exists.meta);
             this.role = exists.role;
             this.missiontoken = exists.token;
             this.subscribed = exists.subscribed;
@@ -546,6 +548,8 @@ export default class Subscription {
     }
 
     async subscriptions(): Promise<MissionSubscriptions> {
+        if (!navigator.onLine) return [];
+
         const { data } = await server.GET('/api/marti/missions/{:name}/subscriptions/roles', {
             params: {
                 path: { ':name': this.guid }
