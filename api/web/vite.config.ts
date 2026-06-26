@@ -1,4 +1,4 @@
-import { defineConfig, type ViteDevServer } from 'vite'
+import { defineConfig, type Plugin, type ViteDevServer } from 'vite'
 import path from 'node:path';
 import vue from '@vitejs/plugin-vue'
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -28,13 +28,13 @@ function resolveSymlinkedHostImport(source: string, importer: string | undefined
 }
 
 /** Plugins symlinked to ~/dev/* resolve imports from the real path, not api/web/plugins/. */
-function symlinkedPluginResolve() {
+function symlinkedPluginResolve(): Plugin {
     const anchor = path.join(webRoot, 'src/main.ts');
 
     return {
         name: 'symlinked-plugin-resolve',
-        enforce: 'pre' as const,
-        async resolveId(source: string, importer: string | undefined) {
+        enforce: 'pre',
+        async resolveId(source: string, importer: string | undefined): Promise<string | null> {
             const host = resolveSymlinkedHostImport(source, importer);
             if (host) return host;
 
@@ -45,7 +45,8 @@ function symlinkedPluginResolve() {
                 && !source.includes(':')
             ) {
                 const resolved = await this.resolve(source, anchor, { skipSelf: true });
-                if (resolved) return resolved;
+                if (!resolved) return null;
+                return typeof resolved === 'string' ? resolved : (resolved.id ?? null);
             }
 
             return null;
