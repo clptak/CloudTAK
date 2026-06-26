@@ -70,18 +70,18 @@ const symlinkedPluginAlias = {
     },
 };
 
-export default defineConfig(({ mode }) => {
-    const devSymlinkPluginResolve = mode === 'development' ? symlinkedPluginResolve() : null;
-    const devSymlinkAliases = mode === 'development'
-        ? [symlinkedHostAlias, symlinkedPluginAlias]
-        : [];
+export default defineConfig(() => {
+    // Active only for importers under ~/dev/cloudtak-* (symlinked plugins).
+    // Docker/VPS clones plugins into api/web/plugins/ so normal relative imports work there.
+    const symlinkPluginResolve = symlinkedPluginResolve();
+    const symlinkAliases = [symlinkedHostAlias, symlinkedPluginAlias];
 
     return {
         define: {
             'import.meta.env.HASH': JSON.stringify(Math.random().toString(36).substring(2, 15)),
         },
         plugins: [
-            ...(devSymlinkPluginResolve ? [devSymlinkPluginResolve] : []),
+            symlinkPluginResolve,
             vue(),
             {
                 name: 'configure-server',
@@ -104,7 +104,7 @@ export default defineConfig(({ mode }) => {
         },
         resolve: {
             alias: [
-                ...devSymlinkAliases,
+                ...symlinkAliases,
                 { find: 'milsymbol', replacement: milsymbolBrowserBundle },
                 { find: '@tak-ps/cloudtak', replacement: path.resolve(__dirname, './plugin.ts') },
                 { find: '@', replacement: path.resolve(__dirname, './src') },
