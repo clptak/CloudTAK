@@ -2,16 +2,16 @@ import { Static } from '@sinclair/typebox';
 import { randomUUID } from 'node:crypto';
 import { DirectChat, MissionChat, CoTParser } from '@tak-ps/node-cot';
 import type { Feature } from '@tak-ps/node-cot';
-import { WebSocket } from 'ws';
+import WebSocket from 'ws';
 import { ConnectionClient } from './connection-pool.js';
 
 export class ConnectionWebSocket {
     ws: WebSocket;
     format: string;
-    session?: number;
+    session?: string;
     client?: ConnectionClient;
 
-    constructor(ws: WebSocket, format = 'raw', client?: ConnectionClient, session?: number) {
+    constructor(ws: WebSocket, format = 'raw', client?: ConnectionClient, session?: string) {
         this.ws = ws;
         this.format = format;
         this.session = session;

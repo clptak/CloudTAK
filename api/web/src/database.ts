@@ -298,3 +298,83 @@ db.version(2).stores({
     mission_template: 'id, name',
     mission_template_log: 'id, template, [template+id]',
 });
+
+let reopenPromise: Promise<void> | null = null;
+
+export async function ensureDatabase(): Promise<void> {
+    if (db.isOpen()) return;
+
+    if (!reopenPromise) {
+        reopenPromise = (async () => {
+            let lastError: unknown;
+            for (let attempt = 0; attempt < 5; attempt++) {
+                if (db.isOpen()) return;
+
+                try {
+                    await db.open();
+                    return;
+                } catch (err) {
+                    if (db.isOpen()) return;
+                    lastError = err;
+                    console.warn(`Dexie reopen attempt ${attempt + 1} failed:`, err);
+                    await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)));
+                }
+            }
+            throw lastError;
+        })().finally(() => {
+            reopenPromise = null;
+        });
+    }
+
+    return reopenPromise;
+}
+
+const TRANSIENT_DB_ERROR_NAMES = new Set([
+    'AbortError',
+    'DatabaseClosedError',
+    'PrematureCommitError',
+    'TransactionInactiveError',
+    'InvalidStateError',
+    'UnknownError'
+]);
+
+const TRANSIENT_DB_ERROR_MESSAGES = [
+    'transaction finished',
+    'transaction is not active',
+    'transaction was aborted',
+    'transaction aborted',
+    'objectstore',
+    'connection is closing',
+    'premature commit'
+];
+
+db.on('close', () => {
+    void ensureDatabase();
+});
+
+export function isTransientDbError(err: unknown): boolean {
+    const e = err as { name?: string; message?: string } | null;
+    if (TRANSIENT_DB_ERROR_NAMES.has(e?.name ?? '')) return true;
+
+    const message = (e?.message ?? '').toLowerCase();
+    return TRANSIENT_DB_ERROR_MESSAGES.some((fragment) => message.includes(fragment));
+}
+
+export async function withDbRetry<T>(fn: () => Promise<T>, attempts = 4): Promise<T> {
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt < attempts; attempt++) {
+        try {
+            await ensureDatabase();
+            return await fn();
+        } catch (err) {
+            lastError = err;
+            if (!isTransientDbError(err)) throw err;
+
+            await ensureDatabase();
+            await new Promise((resolve) => setTimeout(resolve, 50 * (attempt + 1)));
+        }
+    }
+
+    throw lastError;
+}

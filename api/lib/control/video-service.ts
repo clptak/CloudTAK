@@ -524,9 +524,18 @@ export default class VideoServiceControl {
 
         if (lease.proxy) {
             try {
+                // Media server hostname is always trusted; operators may add additional
+                // trusted proxy source hostnames/origins via the media::proxy::allow config
+                const proxyAllow = [
+                    new URL(video.url!).hostname,
+                    ...(await this.config.models.Setting.typed('media::proxy::allow', [])).value,
+                ];
+
                 // Skip isSafeUrl check when StackName=test (test mode)
                 if (process.env.StackName !== 'test') {
-                    const { safe, reason } = await isSafeUrl(lease.proxy);
+                    const { safe, reason } = await isSafeUrl(lease.proxy, {
+                        allow: proxyAllow,
+                    });
                     if (!safe) throw new Err(400, null, `Blocked URL: ${reason}`);
                 }
 
@@ -534,7 +543,9 @@ export default class VideoServiceControl {
 
                 // Check for HLS Errors
                 if (['http:', 'https:'].includes(proxy.protocol)) {
-                    const res = await fetch(proxy);
+                    const res = await fetch(proxy, {
+                        safeUrlAllow: proxyAllow,
+                    });
 
                     if (res.status === 404) {
                         throw new Err(400, null, 'External Video Server reports Video Stream not found');

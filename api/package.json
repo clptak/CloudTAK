@@ -1,7 +1,7 @@
 {
     "name": "@tak-ps/CloudTAK.api",
     "type": "module",
-    "version": "13.22.2",
+    "version": "13.31.0",
     "description": "Facilitate ETL operations to bring non-TAK sources into a TAK Server",
     "main": "index.js",
     "scripts": {
@@ -30,7 +30,7 @@
     "author": "Nick Ingalls <nick@ingalls.ca>",
     "license": "ISC",
     "dependencies": {
-        "@archiver/archiver": "^0.0.9",
+        "@archiver/archiver": "^0.1.0",
         "@aws-sdk/client-cloudformation": "^3.279.0",
         "@aws-sdk/client-cloudwatch": "^3.279.0",
         "@aws-sdk/client-cloudwatch-logs": "^3.423.0",
@@ -113,7 +113,7 @@
         "@types/qr-image": "^3.2.9",
         "@types/sanitize-html": "^2.16.0",
         "@types/semver-sort": "^0.0.5",
-        "@types/sinon": "^21.0.0",
+        "@types/sinon": "^22.0.0",
         "@types/spritesmith": "^3.4.5",
         "@types/suncalc": "^1.9.2",
         "@types/swagger-ui-express": "^4.1.3",

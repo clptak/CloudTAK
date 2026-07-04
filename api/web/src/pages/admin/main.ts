@@ -1,15 +1,16 @@
 import { createApp } from 'vue'
 import * as VueRouter from 'vue-router'
 import { createPinia } from 'pinia'
-import { version } from '../../../package.json'
 import { initServiceWorker } from '../../base/service-worker.ts';
+import { initGlobalErrorReporting, vueErrorHandler } from '../../lib/reporting/index.ts';
 
 import 'floating-vue/dist/style.css'
 import FloatingVue from 'floating-vue'
 
-import App from '../../App.vue'
+import App from '../../App.vue';
 
-initServiceWorker(version);
+initServiceWorker();
+initGlobalErrorReporting();
 
 const router = VueRouter.createRouter({
     history: VueRouter.createWebHistory(),
@@ -155,6 +156,10 @@ const router = VueRouter.createRouter({
                 name: 'admin-geofence',
                 component: () => import('../../components/Admin/AdminGeofence.vue')
             },{
+                path: 'health',
+                name: 'admin-health',
+                component: () => import('../../components/Admin/AdminHealth.vue')
+            },{
                 path: 'export',
                 name: 'admin-export',
                 component: () => import('../../components/Admin/AdminExport.vue')
@@ -181,6 +186,8 @@ router.onError((error, to) => {
 
 const app = createApp(App);
 const pinia = createPinia()
+
+app.config.errorHandler = vueErrorHandler;
 
 app.use(router);
 app.use(pinia);

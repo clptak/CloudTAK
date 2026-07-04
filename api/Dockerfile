@@ -23,15 +23,10 @@ RUN npm install
 
 COPY ./ $HOME/api
 
-RUN if [ ! -z "$WEB_PLUGINS" ]; then \
-        mkdir -p web/plugins; \
-        for url in $(echo $WEB_PLUGINS | tr "," " "); do \
-            git clone $url web/plugins/$(basename $url .git); \
-        done \
-    fi
+RUN WEB_PLUGINS="$WEB_PLUGINS" node bin/plugin.ts
 
 RUN cd web \
-    && npm install \
+    && npm install --legacy-peer-deps \
     && npm run lint \
     && npm run check \
     && npm run build \

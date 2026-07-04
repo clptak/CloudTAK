@@ -16,6 +16,108 @@
 
 ### Pending Release
 
+### v13.31.0 - 2026-07-02
+
+- :tada: Introduce internal client synchronization
+- :rocket: Introduce Multi Select -> radial Clicks - Closes: https://github.com/dfpc-coe/CloudTAK/issues/1498
+
+### v13.30.1 - 2026-07-02
+
+- :rocket: Enable additional debug information when node-cot receives an unparsable XML document
+- :rocket: Loading improvements to Admin Layer Management
+
+### v13.30.0 - 2026-07-02
+
+- :rocket: Simplify the Service Worker Handling
+- :bug: Ensure service worker is still loaded if the window#load event has already fired
+
+### v13.29.0 - 2026-07-01
+
+- :rocket: Migrate Menu & Admin to use StandardItem Import
+- :tada: Allow admins to view import failure reasons & outputs
+- :rocket: Create StandardItem Error for more compact error viewing in the new Admin Health Tab
+
+### v13.28.2 - 2026-07-01
+
+- :bug: A bug in a critical `xml-js` library used for serializing and deserializing XML did not encode attribute values other than `"`
+
+### v13.28.1 - 2026-07-01
+
+- :bug: Output Worker Assets to vite manifest to ensure they are cached by the ServiceWorker
+
+### v13.28.0 - 2026-07-01
+
+- :bug: Fix video lease `POST` failing with `403 Unsafe URL: hostname resolves to blocked IP` when proxying a video source on a private network. Added a `media::proxy::allow` admin config of trusted proxy source hostnames/origins that are concatenated into the SSRF allow-list, editable from the Media Server admin config
+- :tada: Add turn-by-route navigation: a new `lib/routing` MapLibre control snaps the user's location to a TAK Route (`b-m-r`) with Turf `nearestPointOnLine`, drawing a connector to the line and highlighting the remaining segment to the destination
+- :tada: Add a `Navigate` button to Route features in `CoTView` and a `Navigating` banner showing current speed, distance/ETA and the ability to reverse the navigation direction
+- :tada: Add a `Convert to Route` transform to `CoTView` that converts a LineString feature into a TAK Route (`b-m-r`)
+
+### v13.27.0 - 2026-06-30
+
+- :rocket: Move Web Plugin installation logic into `api/bin/plugin.ts`, run within the self-contained Docker build
+- :rocket: Sync `<plugin>/public/` static assets into the CloudTAK Vite `public/` directory without allowing core assets to be overwritten
+
+### v13.26.2 - 2026-06-30
+
+- :bug: Video Property wasn't in use in the CoTView component
+- :bug: Don't allow the user to accidently submit mutiple basemaps (as basemaps can't be deleted)
+- :bug: Automatically remove extra basemaps via a database migration
+- :bug: Ensure the notification panel doesn't overflow the browser
+- :bug: Ensure user's connections can't connect twice
+
+### v13.26.1 - 2026-06-30
+
+- :bug: Ensure changing servers resets the current branding/app store
+- :bug: Ensure the Passkey button is hidden on mobile as it is not yet supported
+
+### v13.26.0 - 2026-06-30
+
+- :tada: Internal Error reporting API and UI for administrators to view and manage user device error reports
+- :rocket: Associate error reports with the originating login session and support deleting errors by individual log, session, username, or all
+- :rocket: Convert login session identifiers to UUIDs
+
+### v13.25.5 - 2026-06-30
+
+- :rocket: Introduce CapGo Live Update support on mobile
+
+### v13.25.4 - 2026-06-29
+
+- :rocket: Improve internal DexieDB database transaction handling
+
+### v13.25.3 - 2026-06-29
+
+- :rocket: Improve internal DexieDB database transaction handling
+
+### v13.25.2 - 2026-06-29
+
+- :rocket: Hide the accuracy ring if the user is using Preset Location mode
+- :rocket: Ensure the user can't select the user menu
+
+### v13.25.1 - 2026-06-28
+
+- :bug: Fix release actions
+
+### v13.25.0 - 2026-06-28
+
+- :bug: Allow configured VideoURL in SafeURL exception list
+- :tada: Redesigned geolocate control with real-time compass readings
+- :rocket: Migrate Session IDs to UUIDs for use as deviceIDs
+- :rocket visual changes to map controls
+
+### v13.24.0 - 2026-06-26
+
+- :tada: Permissions prompt for Firebase Notifications
+- :rocket: Hide style related properties - Closes: https://github.com/dfpc-coe/CloudTAK/issues/1489
+
+### v13.23.1 - 2026-06-26
+
+- :bug: Ensure non-CloudTAK assets don't result in a cache invalidation
+
+### v13.23.0 - 2026-06-26
+
+- :bug: Remove UTF Control Characters when parsing KML input
+- :tada: Add local CLI for debugging import files
+
 ### v13.22.2 - 2026-06-25
 
 - :bug: Styled features are geojson features and should not have XML escaped characters in their human readable properties. This lead to a bug where CloudTAK would detect a mission change as the escaped XML did not match the unescaped XML returned by TAK server, resulting in a constant barrage of change messages.

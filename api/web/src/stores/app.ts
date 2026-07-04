@@ -3,7 +3,7 @@ import { liveQuery, type Subscription } from 'dexie';
 import { Preferences } from '@capacitor/preferences';
 import { StatusBar } from '@capacitor/status-bar';
 import KV from '../base/kv.ts';
-import { db } from '../database.ts';
+import { db, withDbRetry } from '../database.ts';
 import Config from '../base/config.ts';
 import ServerManager from '../base/server.ts';
 import router from '../router.ts';
@@ -55,29 +55,51 @@ export const useAppStore = defineStore('cloudtak-app', {
     }),
     actions: {
         async setServerUrl(serverUrl: string): Promise<void> {
-            await KV.generate('serverUrl', serverUrl);
             await Preferences.set({ key: 'serverUrl', value: serverUrl });
+
+            const mirrorPromise = withDbRetry(() => KV.generate('serverUrl', serverUrl)).catch((err) => {
+                console.warn('Failed to mirror serverUrl into KV store', err);
+            });
+
+            let timeout: ReturnType<typeof setTimeout> | undefined;
+            const timeoutPromise = new Promise<void>((resolve) => {
+                timeout = setTimeout(resolve, 2000);
+            });
+
+            await Promise.race([mirrorPromise, timeoutPromise]);
+
+            if (timeout) clearTimeout(timeout);
         },
 
-        async persistSession(opts: { token: string; username: string }): Promise<void> {
+        async persistSession(opts: { token: string; username: string; session: string }): Promise<void> {
             await Preferences.set({ key: 'token', value: opts.token });
             await KV.generate('token', opts.token);
             await KV.generate('username', opts.username);
+
+            await Preferences.set({
+                key: 'sessionId',
+                value: opts.session
+            });
+
+            await KV.generate('sessionId', opts.session);
+        },
+
+        async getSessionId(): Promise<string | undefined> {
+            const { value } = await Preferences.get({ key: 'sessionId' });
+            return value ?? undefined;
         },
 
         async getUsername(): Promise<string | undefined> {
             return await KV.value('username');
         },
 
-        // Removes the token but leaves the database intact so a quick re-login
-        // after token expiry does not need to resynchronize all data.
         async clearSession(): Promise<void> {
             await Preferences.remove({ key: 'token' });
+            await Preferences.remove({ key: 'sessionId' });
             await KV.delete('token');
+            await KV.delete('sessionId');
         },
 
-        // Clears the token AND wipes the database. Used on explicit sign-out or
-        // when a different user logs in.
         async destroySession(): Promise<void> {
             await this.clearSession();
             await db.delete();
@@ -120,8 +142,7 @@ export const useAppStore = defineStore('cloudtak-app', {
             } catch (err) {
                 console.error(err);
                 this.tokenExpiry = null;
-                // Do NOT wipe the database — only clear the token so cached data
-                // is preserved for re-login.
+
                 await this.clearSession();
                 this.routeLogin();
             } finally {
@@ -136,8 +157,6 @@ export const useAppStore = defineStore('cloudtak-app', {
             window.location.href = '/login';
         },
 
-        // Returns true when bootstrap completed normally, false when it
-        // short-circuited with a redirect so callers can skip follow-up work.
         async bootstrap(): Promise<boolean> {
             this.loadingStage = 'Connecting to server…';
 
