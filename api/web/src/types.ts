@@ -109,23 +109,14 @@ export type PaletteFeature = {
     created: string;
     updated: string;
     name: string;
-    palette: string;
+    template: string;
     type: string;
     style: Record<string, unknown>;
 }
 
-export type Palette = {
-    uuid: string;
-    created: string;
-    updated: string;
-    name: string;
-    template: string;
-    features: Array<PaletteFeature>;
-}
-
-export type PaletteList = {
+export type PaletteFeatureList = {
     total: number;
-    items: Array<Palette>;
+    items: Array<PaletteFeature>;
 }
 
 export type Chat = {
@@ -150,6 +141,7 @@ export type APIProfileChat = {
     updated: string;
     message_id: string;
     message: string;
+    status?: string | null;
 }
 
 export type MissionTemplate = paths["/api/template/mission/{:mission}"]["get"]["responses"]["200"]["content"]["application/json"]

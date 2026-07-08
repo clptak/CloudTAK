@@ -110,7 +110,7 @@ watch([canvas, supportedIcon, () => props.size], async () => {
     const iconName = supportedIcon.value;
     if (!iconName) return;
 
-    const icon = mapStore.map.getImage(iconName)
+    const icon = mapStore.map.getImage(iconName);
     if (!icon) return;
 
     const context = canvas.value.getContext('2d');
@@ -121,8 +121,7 @@ watch([canvas, supportedIcon, () => props.size], async () => {
     if (!context) return;
 
     const bitmap = await createImageBitmap(new ImageData(
-        // @ts-expect-error icon.data.data issue
-        new Uint8ClampedArray(icon.data.data, icon.data.width, icon.data.height),
+        new Uint8ClampedArray(icon.data.data),
         icon.data.width,
         icon.data.height,
     ));
