@@ -16,9 +16,6 @@ import ProfileConfig from './profile.ts';
 import Subscription from './subscription.ts';
 import { FeatureVisibility } from '../stores/modules/feature-visibility.ts';
 
-/**
- * @class
- */
 export default class Overlay {
     _destroyed: boolean;
     _internal: boolean;
@@ -74,8 +71,10 @@ export default class Overlay {
                 for (const layer of ov.styles) {
                     const l = layer as LayerSpecification;
                     l.id = `${ov.id}-${l.id}`;
-                    // @ts-expect-error Special case Background Layer type
-                    l.source = String(ov.id);
+
+                    if (l.type !== 'background') {
+                        l.source = String(ov.id);
+                    }
                 }
             }
 
@@ -242,6 +241,8 @@ export default class Overlay {
         }
 
         for (const l of this.styles) {
+            if (l.type === 'background') continue;
+
             if (before) {
                 mapStore.map.addLayer(l, before);
             } else {
@@ -253,6 +254,8 @@ export default class Overlay {
         // without round-tripping through update()/save() which would PATCH
         // the server with unchanged values.
         for (const l of this.styles) {
+            if (l.type === 'background') continue;
+
             if (this.type === 'raster') {
                 mapStore.map.setPaintProperty(l.id, 'raster-opacity', Number(this.opacity));
             }
@@ -261,8 +264,8 @@ export default class Overlay {
 
         await FeatureVisibility.applyToOverlay(this);
 
-        // Update attribution if this is a basemap
         if (this.mode === 'basemap') {
+            mapStore.updateBackground();
             await mapStore.updateAttribution();
         }
 
@@ -417,12 +420,6 @@ export default class Overlay {
             this.styles = [];
         }
 
-        if (this.iconset) {
-            mapStore.icons.addIconset(this.iconset).catch((err: unknown) => {
-                console.error('Error adding iconset', this.iconset, err);
-            });
-        }
-
         if (this.type === 'vector' && this. mode !== 'basemap' && opts.clickable === undefined) {
             opts.clickable = this.styles.map((l) => {
                 return { id: l.id, type: 'feat' };
@@ -458,12 +455,6 @@ export default class Overlay {
             }
         }
 
-        if (this.iconset) {
-            mapStore.icons.removeIconset(this.iconset).catch((err: unknown) => {
-                console.error('Error removing iconset', this.iconset, err);
-            });
-        }
-
         if (mapStore.map.getStyle().sources[String(this.id)]) {
             // Don't crash the map if it already  removed
             mapStore.map.removeSource(String(this.id));
@@ -472,7 +463,7 @@ export default class Overlay {
 
     moveBefore(overlay?: Overlay): void {
         const mapStore = useMapStore();
-        const before = overlay?.styles[0]?.id;
+        const before = overlay?.styles.find((l) => l.type !== 'background')?.id;
         const hasBefore = before ? !!mapStore.map.getLayer(before) : false;
 
         for (const layer of this.styles) {
@@ -547,7 +538,6 @@ export default class Overlay {
         await this.save();
 
 
-        // Update attribution if this is a basemap
         if (this.mode === 'basemap') {
             const mapStore = useMapStore();
             await mapStore.updateAttribution();
@@ -592,8 +582,10 @@ export default class Overlay {
             await db.overlay.delete(this.id);
         }
 
-        // Update attribution if this was a basemap
+        // If the remaining basemaps provide no background color the CloudTAK
+        // default is restored
         if (wasBasemap) {
+            mapStore.updateBackground();
             await mapStore.updateAttribution();
         }
     }
@@ -621,13 +613,14 @@ export default class Overlay {
         if (body.visible !== undefined && body.visible !== this.visible) {
             this.visible = body.visible;
             for (const l of this.styles) {
+                if (l.type === 'background') continue;
                 mapStore.map.setLayoutProperty(l.id, 'visibility', this.visible ? 'visible' : 'none');
             }
             changed = true;
         }
 
-        // Update attribution if this is a basemap
         if (this.mode === 'basemap') {
+            mapStore.updateBackground();
             await mapStore.updateAttribution();
         }
 

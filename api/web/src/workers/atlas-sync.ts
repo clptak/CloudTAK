@@ -24,11 +24,12 @@ import type Atlas from './atlas.ts';
 import { std } from '../std.ts';
 import type { Feature, ProfileOverlay } from '../types.ts';
 import { WorkerMessageType } from '../base/events.ts';
+
 // base/overlay.ts (OverlayManager) cannot be imported here - it pulls in the
 // map store & maplibre-gl which touch `document` at import time and break the
 // worker. The worker-safe sync shared with OverlayManager lives in overlay-sync.
 import { syncOverlays, applyOverlay, removeOverlay } from '../base/overlay-sync.ts';
-import IconsetManager from '../base/iconset.ts';
+import Icon from '../base/icon.ts';
 import ContactManager from '../base/contact.ts';
 import GroupManager from '../base/group.ts';
 import Chatroom from '../base/chatroom.ts';
@@ -169,7 +170,7 @@ export default class AtlasSync {
         const tasks: Array<[SyncDataType, () => Promise<unknown>]> = [
             [SyncDataType.Overlay, () => syncOverlays()],
             [SyncDataType.Feature, () => this.atlas.db.loadArchive()],
-            [SyncDataType.Iconset, () => IconsetManager.sync()],
+            [SyncDataType.Iconset, () => this.syncIcons()],
             [SyncDataType.Contact, () => ContactManager.sync()],
             [SyncDataType.Group, () => GroupManager.sync()],
             [SyncDataType.Chatroom, () => Chatroom.sync()],
@@ -197,6 +198,47 @@ export default class AtlasSync {
             body: {
                 errors: this.lastErrors
             }
+        });
+    }
+
+    /**
+     * Hydrate the Dexie icon cache (iconset metadata, icon blobs and built-in
+     * sprites) from the API. All bulk icon hydration flows through here; the
+     * main thread only loads individual images into MapLibre on demand via
+     * the missing style image resolver (see stores/modules/icons.ts).
+     */
+    async syncIcons(): Promise<void> {
+        const result = await Icon.hydrate();
+        this.notifyIconsetChange({
+            purge: [...result.updated, ...result.removed],
+            added: result.added
+        });
+    }
+
+    /**
+     * Refresh a single iconset in Dexie. Used by the UI after mutating an
+     * iconset (icon create/update/delete) since the server does not yet
+     * broadcast iconset sync events.
+     */
+    async syncIconset(uid: string): Promise<void> {
+        const updated = await Icon.addIconset(uid, { force: true });
+        if (updated) this.notifyIconsetChange({ purge: [uid], added: [] });
+    }
+
+    /**
+     * Tell the main thread how Dexie iconset content changed. `purge` lists
+     * iconsets whose icon blobs are actually different (version bump, removal
+     * or explicit mutation) so their MapLibre images must be dropped and
+     * re-resolved on demand. `added` lists iconsets cached for the first time
+     * - their content matches what the network fallback already served, so
+     * only fallback placeholder images need repair.
+     */
+    private notifyIconsetChange(body: { purge: string[], added: string[] }): void {
+        if (!body.purge.length && !body.added.length) return;
+
+        this.atlas.postMessage({
+            type: WorkerMessageType.Iconset_Change,
+            body
         });
     }
 
@@ -256,7 +298,6 @@ export default class AtlasSync {
                 // feature (a no-op) while other clients render it.
                 await this.atlas.db.add(event.body as Feature, { skipSave: true });
             } else if (event.id !== undefined) {
-                // No inline payload - fetch just the mutated feature
                 await this.syncFeature(String(event.id));
             } else {
                 // Bulk feature change with no id (e.g. delete-all) - reconcile
@@ -264,7 +305,7 @@ export default class AtlasSync {
                 await this.atlas.db.loadArchive();
             }
         } else if (event.type === SyncDataType.Iconset) {
-            await IconsetManager.sync();
+            await this.syncIcons();
         } else if (event.type === SyncDataType.Contact) {
             await ContactManager.sync();
         } else if (event.type === SyncDataType.Group) {

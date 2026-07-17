@@ -16,6 +16,89 @@
 
 ### Pending Release
 
+### v13.49.0 - 2026-07-16
+
+- :rocket: Switch to using Filter Logs endpoint which allows displaying logs across log streams
+
+### v13.48.0 - 2026-07-16
+
+- :rocket: Avoid calling features API on every reload
+- :rocket: Immediatey render all local data on reload
+
+### v13.47.2 - 2026-07-16
+
+- :rocket: Ensure floating pane position doesn't overlap other UI components by default
+
+### v13.47.1 - 2026-07-15
+
+- :bug: Fix password protected Data Sync password input
+
+### v13.47.0 - 2026-07-15
+
+- :tada: Ability to change Mission Sync role
+- :tada: Allow Connection/Layers to create Core Events
+- :rocket: Rename `--no-<type>` flags for consistently
+- :tada: Add `--no-connections` dev flag to disable connecting TAK with ETL connections
+- :rocket: Throw human readable name on unique constraint in connection name - Closes: https://github.com/dfpc-coe/CloudTAK/issues/619
+- :rocket: Custom Task Type dropdown that supports search
+
+### v13.46.0 - 2026-07-14
+
+- :rocket: Remove Mission Feature listing from overlay menu in favour of a single source of truth in the mission features menu
+- :rocket: Improve speed of adding large number of features by skipping rendering until all features have been added
+- :rocket: Use white text on incoming chat messages regardless of theme
+- :rocket: Add Search Input to Draw Tools dropdown menu and migrate it to be programatically scaffolded from an array of values to support search
+- :tada: Introduce new CoreEvent table and assoc.
+- :bug: Fix vertical line in TablerInput when using a pre or post icon which was visually intrusive
+- :rocket: Add ability to Filter by Active or Inactive channel in MenuChannels
+- :arrow_up: Update to Pinia v4
+
+### v13.45.1 - 2026-07-14
+
+- :rocket: Add loading states to the Map Loading screen
+
+### v13.45.0 - 2026-07-13
+
+- :tada: Split server into `stateful` (hub) and `stateless` (api) modes to support independent ECS service deployment
+- :tada: Route all stateful interactions through a `HubClient` interface, decoupling stateless routes from direct connection state
+- :rocket: Split `Config` into separate `ConfigStateful` and `ConfigStateless` classes
+- :rocket: Wire up stateful RPC endpoints to `batch-schema` framework
+- :rocket: Harden stateful service CloudFormation stack
+- :rocket: Replace internal `sleep` utility with native `node:timers/promises` `setTimeout`
+
+### v13.44.0 - 2026-07-13
+
+- :rocket: Migrate away from async style missinge event and to icon missing callback with async support
+
+### v13.43.0 - 2026-07-13
+
+- :tada: Introduce MapLibre global state so that styles can react to Application State
+- :rocket: Make shared panel class for more visually appealing FloatingPanes
+
+### v13.42.0 - 2026-07-10
+
+- :rocket: Reduce stateful internals in favour of using stateless or cloudTAK database backed calls
+
+### v13.41.1 - 2026-07-10
+
+- :bug: Fix map loading regression which would prevent plugin loading
+- :bug: Fix broken HTML in remarks/description content - Fixes: https://github.com/dfpc-coe/CloudTAK/issues/1565
+
+### v13.41.0 - 2026-07-10
+
+- :rocket: Send Phone Number in CoT message if set - Closes: https://github.com/dfpc-coe/CloudTAK/issues/1568
+
+### v13.40.0 - 2026-07-10
+
+- :bug: Tie loading state to end on `load` event instead of `idle` as immediate features can prevent `idle` state
+- :rocket: Immediately show local Data Sync features (and then request a refresh) if they are available locally
+- :rocket: Remove "Your Features" tree from the overlay menu now that it is surfaced via MenuFeatures
+
+### v13.39.0 - 2026-07-08
+
+- :rocket: Replace the `@openaddresses/batch-alarms` dependency with in-repo `cloudformation/lib/alarms.ts` & `cloudformation/lib/dashboard.ts`
+- :tada: Show a red threshold line on the CPU & Memory dashboard widgets indicating the value the utilization alarms are set to
+
 ### v13.38.0 - 2026-07-08
 
 - :bug: Ensure Icons change is CoTView uid changes

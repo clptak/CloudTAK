@@ -15,9 +15,12 @@
             style='width: 100%;'
         />
 
-        <MapLoading v-if='loading || !mapStore.isLoaded' />
+        <MapLoading
+            v-if='loading || !mapStore.isMapLoaded'
+            :stage='mapStore.loadingStage'
+        />
 
-        <template v-if='mapStore.isLoaded && !loading'>
+        <template v-if='mapStore.isMapLoaded && !loading'>
             <WarnConfiguration
                 v-if='warnConfiguration'
                 @close='warnConfiguration = false'
@@ -115,7 +118,7 @@
                     left: 8px;
                 '
             >
-                <div class='cloudtak-ctrl-group'>
+                <div class='cloudtak-ctrl-group cloudtak-panel'>
                     <div
                         v-tooltip='"Search"'
                         role='button'
@@ -269,7 +272,7 @@
             </TablerModal>
 
             <div
-                v-if='mapStore.isLoaded && mode === "Default"'
+                v-if='mapStore.isMapLoaded && mode === "Default"'
                 class='d-flex position-absolute top-0 text-white'
                 style='
                     z-index: 5;
@@ -358,7 +361,7 @@
 
             <MainMenu
                 v-if='
-                    mapStore.isLoaded
+                    mapStore.isMapLoaded
                         && (
                             (noMenuShown && !isMobileDetected)
                             || (!noMenuShown)
@@ -368,7 +371,7 @@
             />
 
             <div
-                v-if='mapStore.isLoaded && isMobileDetected && mode === "Default"'
+                v-if='mapStore.isMapLoaded && isMobileDetected && mode === "Default"'
                 class='position-absolute'
                 style='
                     z-index: 4;
@@ -385,11 +388,7 @@
                 @selected='selectFeat($event)'
             />
 
-            <!--
-                Keyed on the radial target so repointing the radial at a new
-                feature (e.g. contextmenu while one is already open) remounts
-                the component and regenerates its menu items
-            -->
+            <!-- Keyed on the radial target so repointing at a new feature remounts the component and regenerates its menu items -->
             <RadialMenu
                 v-else-if='mapStore.radial.mode'
                 :key='`${mapStore.radial.mode}:${mapStore.radial.cot?.properties?.id ?? ""}`'
@@ -531,10 +530,8 @@ const width = ref<number>(window.innerWidth);
 
 appStore.isMobileDetected = detectMobile();
 
-// Show a popup if no channels are selected on load
 const warnChannels = ref<boolean>(false)
 
-// Show a popup if role/groups hasn't been set
 const warnConfiguration = ref<boolean>(false);
 
 const searchBoxShown = ref(false);
@@ -588,6 +585,11 @@ watch(isMobileDetected, () => {
     appStore.isMobileDetected = isMobileDetected.value;
 });
 
+watch(() => appStore.resolvedTheme, (theme) => {
+    if (!mapStore._map || !mapStore.isMapLoaded) return;
+    mapStore.map.setGlobalStateProperty('theme', theme);
+});
+
 const displayZoom = computed(() => {
     if (mapStore.zoom === 'conditional') {
         return !isMobileDetected.value;
@@ -616,7 +618,6 @@ const toggleCompass = () => {
     } else if (mapStore.bearing !== 0) {
         mapStore.map.setBearing(0);
     } else {
-        // Was at bearing 0, now enable user orientation mode
         mapStore.userOrientationMode = true;
     }
 }
@@ -717,9 +718,7 @@ onBeforeUnmount(() => {
 
 function selectFeat(selectedFeat: MapGeoJSONFeature | COT) {
     if (selectedFeat instanceof COT) {
-        // Mirror a direct marker click - open the radial menu for the CoT
-        // (anchored where the user originally clicked) rather than the
-        // CoTView sidebar
+        // Mirror a direct marker click - open the radial menu for the CoT rather than the CoTView sidebar
         const lngLat = mapStore.map.unproject([mapStore.select.x, mapStore.select.y]);
 
         mapStore.select.feats = [];
@@ -761,12 +760,10 @@ async function toLocation() {
 }
 
 function setLocation() {
-    // Always enter manual location setting mode when button is clicked
     mapStore.manualLocationMode = true;
     mode.value = 'SetLocation';
     mapStore.map.getCanvas().style.cursor = 'crosshair';
 
-    // Store the handler so we can remove it later if needed
     locationClickHandler.value = async (e: MapMouseEvent) => {
         mapStore.map.getCanvas().style.cursor = '';
         mode.value = 'Default';
@@ -789,7 +786,6 @@ function cancelLocationSetting() {
     mode.value = 'Default';
     mapStore.map.getCanvas().style.cursor = '';
 
-    // Remove the specific location click handler if it exists
     if (locationClickHandler.value) {
         mapStore.map.off('click', locationClickHandler.value);
         locationClickHandler.value = null;
@@ -797,18 +793,15 @@ function cancelLocationSetting() {
 }
 
 async function exitManualMode() {
-    // Switch back to automatic GPS mode
     mapStore.manualLocationMode = false;
     mode.value = 'Default';
     mapStore.map.getCanvas().style.cursor = '';
 
-    // Remove the specific location click handler if it exists
     if (locationClickHandler.value) {
         mapStore.map.off('click', locationClickHandler.value);
         locationClickHandler.value = null;
     }
 
-    // Immediately set location to loading state for UI feedback
     mapStore.location = LocationState.Loading;
 
     // Remove current location dot from map by removing user's CoT
@@ -816,10 +809,8 @@ async function exitManualMode() {
     const userUid = `ANDROID-CloudTAK-${username ? username.value : 'unknown'}`;
     await mapStore.worker.db.remove(userUid);
 
-    // Clear manual location and wait for it to complete
     await mapStore.worker.profile.update({ tak_loc: null });
 
-    // Restart GPS watch to ensure fresh GPS acquisition
     void mapStore.startLocationWatch();
 
     await mapStore.refresh();
@@ -902,7 +893,6 @@ async function handleRadial(event: string): Promise<void> {
         const line = turfLineString(cotFeat.geometry.coordinates as [number, number][]);
         const click = turfPoint([mapStore.radial.lngLat!.lng, mapStore.radial.lngLat!.lat]);
 
-        // Snap click to the nearest point exactly on the line, then split there
         const snapped = nearestPointOnLine(line, click);
         const split = lineSplit(line, snapped);
 
@@ -975,27 +965,11 @@ async function handleRadial(event: string): Promise<void> {
     z-index: 2;
     width: min(640px, calc(100vw - 16px));
     border-radius: 0px 0px 8px 8px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
-}
-
-html[data-bs-theme='dark'] .cloudtak-navigating {
-    background-color: rgba(40, 53, 71, 0.95);
-    color: rgba(255, 255, 255, 0.92);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-html[data-bs-theme='light'] .cloudtak-navigating {
-    background-color: rgba(255, 255, 255, 0.95);
-    color: var(--tblr-body-color);
-    border: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 /*
- * On small screens the banner spans nearly the full width and would overlap the
- * Active Mission bar (left), the notification/editing tools (right) and the main
- * menu — all of which occupy the top 60px. Drop the banner below them so those
- * controls remain usable. When detached from the top edge, all four corners are
- * rounded.
+ * On small screens the banner would overlap the top controls (Active Mission, tools and menu);
+ * drop it below them so they stay usable and round all four corners.
  */
 @media (max-width: 767.98px) {
     .cloudtak-navigating {
@@ -1013,20 +987,6 @@ html[data-bs-theme='light'] .cloudtak-navigating {
     flex-direction: column;
     width: 40px;
     overflow: hidden;
-    border-radius: 8px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
-}
-
-html[data-bs-theme='dark'] .cloudtak-ctrl-group {
-    background-color: rgba(40, 53, 71, 0.95);
-    color: rgba(255, 255, 255, 0.92);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-html[data-bs-theme='light'] .cloudtak-ctrl-group {
-    background-color: rgba(255, 255, 255, 0.95);
-    color: var(--tblr-body-color);
-    border: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 .cloudtak-ctrl-btn {
@@ -1045,12 +1005,8 @@ html[data-bs-theme='light'] .cloudtak-ctrl-group {
     outline: none;
 }
 
-html[data-bs-theme='dark'] .cloudtak-ctrl-btn:not(:first-child) {
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-html[data-bs-theme='light'] .cloudtak-ctrl-btn:not(:first-child) {
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
+.cloudtak-ctrl-btn:not(:first-child) {
+    border-top: 1px solid var(--tblr-border-color);
 }
 
 html[data-bs-theme='dark'] .cloudtak-ctrl-btn:hover,
