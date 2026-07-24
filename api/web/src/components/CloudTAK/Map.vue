@@ -81,7 +81,6 @@
             </GenericBottomPane>
             <BottomBar
                 :mode='mode'
-                :mouse-coord='mouseCoord'
                 @set-location='setLocation'
                 @to-location='toLocation'
             />
@@ -120,7 +119,6 @@
             >
                 <div class='cloudtak-ctrl-group cloudtak-panel'>
                     <div
-                        v-tooltip='"Search"'
                         role='button'
                         tabindex='0'
                         title='Search Button'
@@ -138,18 +136,17 @@
                         role='button'
                         tabindex='0'
                         class='cloudtak-ctrl-btn'
+                        :title='mapStore.userOrientationMode ? "Orient North" : "Snap to North"'
                         @click='toggleCompass'
                     >
                         <IconCompass
                             v-if='mapStore.userOrientationMode'
-                            v-tooltip='"Orient North"'
                             :size='24'
                             stroke='2'
                             color='#1E90FF'
                         />
                         <template v-else>
                             <IconCircleArrowUp
-                                v-tooltip='"Snap to North"'
                                 :alt='`Map Rotated to ${humanBearing}`'
                                 :transform='`rotate(${360 - mapStore.bearing})`'
                                 :size='24'
@@ -168,10 +165,10 @@
                         role='button'
                         tabindex='0'
                         class='cloudtak-ctrl-btn'
+                        title='Snap Flat'
                         @click='mapStore.map.setPitch(0)'
                     >
                         <IconAngle
-                            v-tooltip='"Snap Flat"'
                             :alt='`Map Pitch to ${humanPitch}`'
                             :size='24'
                             stroke='2'
@@ -184,7 +181,6 @@
 
                     <template v-if='displayZoom'>
                         <div
-                            v-tooltip='"Zoom In"'
                             role='button'
                             tabindex='0'
                             title='Zoom In Button'
@@ -197,7 +193,6 @@
                             />
                         </div>
                         <div
-                            v-tooltip='"Zoom Out"'
                             role='button'
                             tabindex='0'
                             title='Zoom Out Button'
@@ -213,10 +208,9 @@
 
                     <div
                         v-if='hasTerrain'
-                        v-tooltip='mapStore.terrainEnabled ? "Disable 3D Terrain" : "Enable 3D Terrain"'
                         role='button'
                         tabindex='0'
-                        title='3D Terrain'
+                        :title='mapStore.terrainEnabled ? "Disable 3D Terrain" : "Enable 3D Terrain"'
                         class='cloudtak-ctrl-btn'
                         @click='mapStore.terrainEnabled ? mapStore.removeTerrain() : mapStore.addTerrain()'
                     >
@@ -232,7 +226,6 @@
                             (mapStore.radial.cot && mapStore.locked.length >= 2)
                                 || (!mapStore.radial.cot && mapStore.locked.length >= 1)
                         '
-                        v-tooltip='"Map is locked to marker - Click to Unlock"'
                         title='Map is locked to marker - Click to Unlock'
                         role='button'
                         tabindex='0'
@@ -508,6 +501,7 @@ import { stdurl } from '../../std.ts';
 import ProfileConfig from '../../base/profile.ts';
 import Config from '../../base/config.ts';
 import { cutOverlayFeature } from './util/featureCut.ts';
+import { copyFeatureToClipboard, readFeatureFromClipboard } from '../../stores/device/clipboard.ts';
 import MissionInviteModal from './Menu/Mission/MissionInviteModal.vue';
 
 const mapStore = useMapStore();
@@ -624,8 +618,6 @@ const toggleCompass = () => {
 
 const mapRef = useTemplateRef<HTMLElement>('map');
 
-const mouseCoord = ref<{ lat: number; lng: number } | null>(null);
-
 const noMenuShown = computed<boolean>(() => {
     return (!route.name || !String(route.name).startsWith('home-menu'))
 });
@@ -653,17 +645,6 @@ onMounted(async () => {
 
     if (!mapRef.value) throw new Error('Map Element could not be found - Please refresh the page and try again');
     await mapStore.init(mapRef.value);
-
-    mapStore.map.on('mousemove', (e) => {
-        mouseCoord.value = {
-            lat: e.lngLat.lat,
-            lng: e.lngLat.lng,
-        };
-    });
-
-    mapStore.map.on('mouseleave' as Parameters<typeof mapStore.map.on>[0], () => {
-        mouseCoord.value = null;
-    });
 
     // TODO these are no longer reactive, does it matter?
     warnChannels.value = await mapStore.worker.profile.hasNoChannels();
@@ -874,6 +855,49 @@ async function handleRadial(event: string): Promise<void> {
 
         await mapStore.refresh();
         closeRadial()
+    } else if (event === 'cot:copy') {
+        const cotFeat = await mapStore.worker.db.get(
+            mapStore.radial.cot.properties.id || String(mapStore.radial.cot.id),
+            { mission: true }
+        );
+
+        closeRadial();
+        if (!cotFeat) throw new Error('Cannot find COT to copy');
+
+        await copyFeatureToClipboard({
+            id: cotFeat.id,
+            type: 'Feature',
+            path: cotFeat.path || '/',
+            properties: cotFeat.properties,
+            geometry: cotFeat.geometry
+        } as Feature);
+    } else if (event === 'context:paste') {
+        const lngLat = mapStore.radial.lngLat;
+        closeRadial();
+
+        if (!lngLat) throw new Error('Cannot determine paste location');
+
+        const feat = await readFeatureFromClipboard();
+        if (!feat) throw new Error('Clipboard does not contain a GeoJSON Point Feature');
+
+        const id = randomUUID();
+        feat.id = id;
+        feat.properties.id = id;
+
+        feat.geometry = {
+            type: 'Point',
+            coordinates: [lngLat.lng, lngLat.lat]
+        };
+        feat.properties.center = [lngLat.lng, lngLat.lat];
+
+        // Pasted features are authored copies - archive so they survive going stale
+        feat.properties.archived = true;
+
+        await mapStore.worker.db.add(feat, {
+            authored: true
+        });
+
+        await mapStore.refresh();
     } else if (event === 'context:info') {
         // @ts-expect-error Figure out geometry.coordinates type
         router.push(`/query/${encodeURIComponent(mapStore.radial.cot.geometry.coordinates.join(','))}`);

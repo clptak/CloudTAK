@@ -13,6 +13,7 @@
             "@capacitor/network",
             "@capacitor/camera",
             "@capacitor/clipboard",
+            "@capacitor/device",
             "@capacitor/geolocation",
             "@capacitor/haptics",
             "@capacitor/keyboard",
@@ -36,7 +37,7 @@
         },
         "CapacitorUpdater": {
             "appId": "io.cloudtak.app",
-            "version": "13.49.0",
+            "version": "13.53.2",
             "autoUpdate": "atBackground"
         }
     }
