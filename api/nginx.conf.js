@@ -23,7 +23,14 @@ if (url.hostname === 'localhost') {
         'worker-src': [`'self'`, 'blob:'],
         'style-src-elem': [`'self'`, `'unsafe-inline'`],
         'style-src-attr': [`'unsafe-inline'`],
-        'connect-src': [`'self'`]
+        // Lightning plugin: Blitzortung WS + OpenWeather HTTPS (persist in this fork)
+        'connect-src': [
+            `'self'`,
+            'wss://ws1.blitzortung.org',
+            'wss://ws7.blitzortung.org',
+            'wss://ws8.blitzortung.org',
+            'https://demo.openweathermap.org'
+        ]
     }
 
     cspstr = `add_header 'Content-Security-Policy' "`
