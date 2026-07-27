@@ -604,6 +604,17 @@ export default class COT {
                 } else {
                     properties["marker-color"] = '#ffffff';
                 }
+            } else if (
+                // Wire CoT collapses numeric SIDC type → a-*-* and often drops
+                // usericon; __milicon keeps the FalconView/2525E SIDC.
+                properties.milicon?.id
+                && Type2525.isNumericSIDCConvertable(String(properties.milicon.id))
+            ) {
+                const sidc = String(properties.milicon.id);
+                properties.icon = `2525E:${sidc}`;
+                if (!Type2525.isNumericSIDCConvertable(properties.type)) {
+                    properties.type = sidc;
+                }
             } else if (properties.icon) {
                 // Format of icon needs to change for spritesheet
                 if (!properties.icon.includes(':')) {
