@@ -16,6 +16,34 @@
 
 ### Pending Release
 
+### v13.56.0 - 2026-07-25
+
+- :tada: Introduce Mission/Data-Sync layer editing
+- :rocket: Add Routing persistence so reloads don't stop routing
+- :bug: Allow Routing on Mission/Data Sync routes
+- :rocket: Include Battery Info in Self-SA Message
+
+### v13.55.0 - 2026-07-25
+
+- :arrow_up: Update MediaInfra@9.8
+
+### v13.54.3 - 2026-07-25
+
+- :rocket: Migrate the feature sidebar from a custom div to MenuTemplate for consistent mobile UI
+
+### v13.54.2 - 2026-07-24
+
+- :bug: Fix lints and checks
+
+### v13.54.1 - 2026-07-24
+
+- :bug: Fix bug in nginx tests
+
+### v13.54.0 - 2026-07-24
+
+- :rocket: Allow changing CSP behavior in nginx via `NGINX_CSP_<directive>` environment variables
+- :bug: Improved iOS resume behavior
+
 ### v13.53.2 - 2026-07-24
 
 = :bug: TileJSON@3 supports a 3rd zoom value in the `center` field
