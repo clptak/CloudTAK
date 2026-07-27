@@ -7,10 +7,36 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 const milsymbolBrowserBundle = path.resolve(__dirname, 'node_modules/milsymbol/dist/milsymbol.js');
 const webRoot = __dirname;
 
+/** Real paths of plugins/ entries that symlink outside api/web (e.g. ~/dev/lightning). */
+function symlinkedPluginRoots(): string[] {
+    const pluginsDir = path.join(webRoot, 'plugins');
+    if (!fs.existsSync(pluginsDir)) return [];
+
+    const roots: string[] = [];
+    for (const name of fs.readdirSync(pluginsDir)) {
+        const pluginPath = path.join(pluginsDir, name);
+        let real: string;
+        try {
+            real = fs.realpathSync(pluginPath);
+        } catch {
+            continue;
+        }
+        if (real !== pluginPath) roots.push(real);
+    }
+    return roots;
+}
+
+const pluginSymlinkRoots = symlinkedPluginRoots();
+
 function isDevPluginImporter(importer: string | undefined): boolean {
     if (!importer) return false;
-    const file = importer.replace(/^virtual-module:/, '').split('?')[0];
-    return file.includes('/dev/cloudtak-');
+    const file = path.normalize(importer.replace(/^virtual-module:/, '').split('?')[0]);
+    // Historical naming: ~/dev/cloudtak-plugin-*
+    if (file.includes(`${path.sep}dev${path.sep}cloudtak-`)) return true;
+    // Any plugins/* symlink whose real path is outside api/web
+    return pluginSymlinkRoots.some(
+        (root) => file === root || file.startsWith(root + path.sep),
+    );
 }
 
 function resolveSymlinkedHostImport(source: string, importer: string | undefined): string | null {
