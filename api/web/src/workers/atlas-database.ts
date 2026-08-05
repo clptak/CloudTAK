@@ -17,8 +17,13 @@ import TAKNotification, { NotificationType } from '../base/notification.ts';
 import { WorkerMessageType } from '../base/events.ts';
 import type { GeoJSONSourceDiff, LngLatLike } from 'maplibre-gl';
 import { booleanWithin } from '@turf/boolean-within';
+import { isEqual } from '@ver0/deep-equal';
 import type { Polygon } from 'geojson';
 import type { InputFeature, Feature, APIList, Contact } from '../types.ts';
+import type {
+    Feature as GeoJSONFeature,
+    Geometry as GeoJSONGeometry,
+} from 'geojson';
 import ProfileConfig from '../base/profile.ts';
 import * as Comlink from 'comlink';
 import AtlasBreadcrumb from './atlas-breadcrumb.ts';
@@ -260,6 +265,72 @@ export default class AtlasDatabase {
     }
 
     /**
+     * Has a CoT's stale time exceeded the user's configured display window
+     */
+    static staleElapsed(display_stale: string, stale: number, now: number): boolean {
+        return !['Never'].includes(display_stale) && (
+            display_stale === 'Immediate'       && now > stale
+            || display_stale === '10 Minutes'   && now > stale + 600000
+            || display_stale === '30 Minutes'   && now > stale + 600000 * 3
+            || display_stale === '1 Hour'       && now > stale + 600000 * 6
+        );
+    }
+
+    /**
+     * Full-state render of every visible CoT, for replacing the map source
+     * contents wholesale via setData. diff() consumes its pending queues
+     * even when the main thread fails to apply the result, so a lost diff
+     * (or any doubt after an app resume) is recovered here; the queues are
+     * cleared as the snapshot supersedes them.
+     */
+    async snapshot(): Promise<Array<GeoJSONFeature<GeoJSONGeometry, Record<string, unknown>>>> {
+        const now = +new Date();
+        const display_stale = String((await ProfileConfig.get('display_stale'))?.value || 'Immediate');
+
+        // Queue consumption and the cots iteration happen synchronously
+        // (no awaits) so a feature added mid-snapshot can never be dropped
+        // from both the snapshot and the next diff
+        const deleted = new Set<string>(this.pendingDelete);
+        const hidden = new Set<string>(this.pendingHidden);
+
+        this.pendingCreate.clear();
+        this.pendingUpdate.clear();
+        this.pendingHidden.clear();
+        this.pendingUnhide.clear();
+        this.pendingDelete.clear();
+
+        const features: Array<GeoJSONFeature<GeoJSONGeometry, Record<string, unknown>>> = [];
+
+        for (const cot of this.cots.values()) {
+            // The user's own position is drawn by the GeolocateControl puck
+            // rather than as a CoT marker on the map.
+            if (cot.is_self || deleted.has(cot.id) || hidden.has(cot.id)) continue;
+
+            const stale = new Date(cot.properties.stale).getTime();
+
+            if (!cot.properties.archived) {
+                if (AtlasDatabase.staleElapsed(display_stale, stale, now)) {
+                    deleted.add(cot.id);
+                    continue;
+                }
+
+                const opacity = now < stale ? 1 : 0.5;
+                cot.properties['icon-opacity'] = opacity;
+                cot.properties['marker-opacity'] = opacity;
+            }
+
+            features.push(cot.as_rendered());
+        }
+
+        for (const id of deleted) {
+            this.cots.delete(id);
+            await withDbRetry(() => db.feature.delete(id));
+        }
+
+        return features;
+    }
+
+    /**
      * Iterate over all CoTs and delete toTs that match the filter pattern
      * @param filter - JSONata filter expression to match CoTs against
      */
@@ -336,24 +407,6 @@ export default class AtlasDatabase {
         } else {
             return cots;
         }
-    }
-
-    async filterDelete(
-        filter: string,
-        opts: {
-            mission?: boolean,
-        } = {}
-    ): Promise<void> {
-        const cots = await this.filter(filter, opts);
-
-        const all = [];
-        for (const cot of cots.values()) {
-            all.push(this.remove(cot.id, {
-                mission: opts.mission || false
-            }));
-        }
-
-        await Promise.allSettled(all);
     }
 
     async paths(store?: Map<string, COT>): Promise<Array<NestedArray>> {
@@ -786,6 +839,10 @@ export default class AtlasDatabase {
             return exists;
         } else {
             if (exists) {
+                const geometryMoved = opts.authored === true
+                    && !!feat.geometry
+                    && !isEqual(exists.geometry, feat.geometry);
+
                 const changed = await exists.update({
                     path: feat.path,
                     properties: feat.properties,
@@ -796,6 +853,10 @@ export default class AtlasDatabase {
                 // (mutated in place) to avoid a duplicate add+update in one diff.
                 if (changed && !this.pendingCreate.has(exists.id)) {
                     this.pendingUpdate.set(exists.id, exists);
+                }
+
+                if (geometryMoved) {
+                    await this.syncCoreEventGeometry(exists);
                 }
 
                 if (exists.is_self) {
@@ -854,6 +915,10 @@ export default class AtlasDatabase {
                         type: WorkerMessageType.Feature_Archived_Added,
                     });
                 }
+
+                if (opts.authored) {
+                    await this.syncCoreEventGeometry(exists);
+                }
             }
 
             if (exists.is_skittle) {
@@ -891,6 +956,34 @@ export default class AtlasDatabase {
             await this.breadcrumb.update(exists);
 
             return exists;
+        }
+    }
+
+    /**
+     * PATCH a locally moved Core Event marker back to the Event API - a
+     * failure is reverted on clients by the next Event rebroadcast
+     */
+    private async syncCoreEventGeometry(cot: COT): Promise<void> {
+        const link = (cot.properties.links || []).find((link) => {
+            return link.type === 'core-event' && link.event;
+        });
+
+        if (!link || !link.event) return;
+        if (cot.geometry.type !== 'Point') return;
+
+        try {
+            await std(`/api/core/event/${link.event}`, {
+                method: 'PATCH',
+                token: this.atlas.token,
+                body: {
+                    geometry: {
+                        type: 'Point',
+                        coordinates: cot.geometry.coordinates.slice(0, 2)
+                    }
+                }
+            });
+        } catch (err) {
+            console.error(`Failed to sync Core Event geometry for ${cot.id}:`, err);
         }
     }
 
@@ -971,17 +1064,6 @@ export default class AtlasDatabase {
         return this.cots.has(id);
     }
 
-    groups(store?: Map<string, COT>): Array<string> {
-        if (!store) store = this.cots;
-
-        const groups: Set<string> = new Set();
-        for (const value of store.values()) {
-            if (value.properties.group) groups.add(value.properties.group.name);
-        }
-
-        return Array.from(groups);
-    }
-
     pathFeatures(path?: string, store?: Map<string, COT>): Set<COT> {
         if (!store) store = this.cots;
 
@@ -998,55 +1080,5 @@ export default class AtlasDatabase {
         }
 
         return feats;
-    }
-
-    markers(store?: Map<string, COT>): Array<string> {
-        if (!store) store = this.cots;
-
-        const markers: Set<string> = new Set();
-        for (const value of store.values()) {
-            if (value.properties.group) continue;
-            if (value.properties.archived) continue;
-            markers.add(value.properties.type);
-        }
-
-        return Array.from(markers);
-    }
-
-    markerFeatures(marker: string, store?: Map<string, COT>): Set<COT> {
-        if (!store) store = this.cots;
-
-        const feats: Set<COT> = new Set();
-
-        for (const value of store.values()) {
-            if (value.properties.group) continue;
-            if (value.properties.archived) continue;
-
-            if (value.properties.type === marker) {
-                feats.add(value);
-            }
-        }
-
-        return feats;
-    }
-
-    contacts(group?: string, store?: Map<string, COT>): Set<COT> {
-        if (!store) store = this.cots;
-
-        const contacts: Set<COT> = new Set();
-        for (const value of store.values()) {
-            if (value.properties.group) contacts.add(value);
-        }
-
-        let list = Array.from(contacts);
-
-        if (group) {
-            list = list.filter((contact) => {
-                if (!contact.properties.group) return false;
-                return contact.properties.group.name === group;
-            })
-        }
-
-        return new Set(list);
     }
 }

@@ -16,6 +16,46 @@
 
 ### Pending Release
 
+### v13.61.0 - 2026-08-04
+
+- :bug: Perform a full map re-render when app is foregrounded
+
+### v13.60.1 - 2026-08-04
+
+- :rocket: Sync Versions
+
+### v13.60.0 - 2026-08-04
+
+- :rocket: Consistent Menu Styling
+
+### v13.59.2 - 2026-08-03
+
+- :rocket: Consistent Menu Styling
+
+### v13.59.1 - 2026-08-02
+
+- :bug: Reintroduce schedule based Mission rendering checks as a fallback
+
+### v13.59.0 - 2026-08-02
+
+- :tada: Introduce Core Event data types
+
+### v13.58.0 - 2026-08-01
+
+- :rocket: Use the Admin Cert to sync upstream group/channel information into new Group/Channels
+
+### v13.57.4 - 2026-08-01
+
+- :arrow_up: Update all Capacitor Dependencies
+
+### v13.57.3 - 2026-07-31
+
+- :bug: Fix WebSocket Disconnection Bug
+
+### v13.57.2 - 2026-07-29
+
+- :bug: Replenish the `VideoPlayer` retry budget after sustained playback, so a long running Video Wall tile is no longer permanently retired by a few unrelated stream errors spread across a session
+
 ### v13.57.1 - 2026-07-29
 
 - :arrow_up: Update DockerCompose MediaInfra image
