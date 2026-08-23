@@ -44,6 +44,7 @@ export const UserConfigKeys: (keyof Static<typeof FullConfig>)[] = [
     'map::bearing',
     'map::zoom',
     'map::basemap',
+    'map::basemap::favs',
     'map::terrain',
     'group::Yellow',
     'group::Cyan',
@@ -136,6 +137,21 @@ export default async function router(schema: Schema, config: ConfigStateless) {
 
                 if (basemap.username || basemap.overlay || basemap.hidden) {
                     throw new Err(400, null, 'Default Basemap must be a visible, non-overlay Server Basemap');
+                }
+            }
+
+            if (req.body['map::basemap::favs'] !== undefined && req.body['map::basemap::favs'] !== null) {
+                for (const fav of req.body['map::basemap::favs']) {
+                    let basemap;
+                    try {
+                        basemap = await config.models.Basemap.from(fav.id);
+                    } catch (err) {
+                        throw new Err(400, err instanceof Error ? err : new Error(String(err)), `Favourite Basemap (${fav.id}) does not exist`);
+                    }
+
+                    if (basemap.username || basemap.overlay || basemap.hidden) {
+                        throw new Err(400, null, 'Favourite Basemaps must be visible, non-overlay Server Basemaps');
+                    }
                 }
             }
 
@@ -268,6 +284,25 @@ export default async function router(schema: Schema, config: ConfigStateless) {
         try {
             res.json({
                 url: config.PMTILES_URL,
+            });
+        } catch (err) {
+            Err.respond(err, res);
+        }
+    });
+
+    await schema.get('/config/webhooks', {
+        name: 'Webhook Config',
+        group: 'Config',
+        description: 'Return the base URL that incoming Layer Webhooks are served from',
+        res: Type.Object({
+            url: Type.String(),
+        }),
+    }, async (req, res) => {
+        try {
+            await Auth.as_user(config, req);
+
+            res.json({
+                url: config.WEBHOOKS_URL,
             });
         } catch (err) {
             Err.respond(err, res);

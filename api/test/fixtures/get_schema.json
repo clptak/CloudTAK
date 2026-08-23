@@ -109,6 +109,11 @@
         "query": false,
         "res": true
     },
+    "GET /config/webhooks": {
+        "body": false,
+        "query": false,
+        "res": true
+    },
     "GET /connection/:connectionid/asset": {
         "body": false,
         "query": false,
@@ -429,6 +434,31 @@
         "query": false,
         "res": true
     },
+    "GET /core/device": {
+        "body": false,
+        "query": true,
+        "res": true
+    },
+    "GET /core/device/:device": {
+        "body": false,
+        "query": false,
+        "res": true
+    },
+    "POST /core/device": {
+        "body": true,
+        "query": false,
+        "res": true
+    },
+    "PATCH /core/device/:device": {
+        "body": true,
+        "query": false,
+        "res": true
+    },
+    "DELETE /core/device/:device": {
+        "body": false,
+        "query": false,
+        "res": true
+    },
     "GET /board": {
         "body": false,
         "query": true,
@@ -649,21 +679,6 @@
         "query": false,
         "res": true
     },
-    "GET /layer": {
-        "body": false,
-        "query": true,
-        "res": true
-    },
-    "GET /data/:dataid": {
-        "body": false,
-        "query": false,
-        "res": true
-    },
-    "GET /layer/:layerid": {
-        "body": false,
-        "query": true,
-        "res": true
-    },
     "GET /iconset": {
         "body": false,
         "query": true,
@@ -729,14 +744,19 @@
         "query": true,
         "res": false
     },
-    "GET /template": {
+    "GET /layer": {
         "body": false,
         "query": true,
         "res": true
     },
-    "POST /template": {
-        "body": true,
+    "GET /data/:dataid": {
+        "body": false,
         "query": false,
+        "res": true
+    },
+    "GET /layer/:layerid": {
+        "body": false,
+        "query": true,
         "res": true
     },
     "GET /ldap/channel": {
@@ -1399,6 +1419,11 @@
         "query": true,
         "res": true
     },
+    "POST /retention": {
+        "body": true,
+        "query": false,
+        "res": true
+    },
     "GET /server/repeater": {
         "body": false,
         "query": false,
@@ -1406,11 +1431,6 @@
     },
     "DELETE /server/repeater/:uid": {
         "body": false,
-        "query": false,
-        "res": true
-    },
-    "POST /retention": {
-        "body": true,
         "query": false,
         "res": true
     },
@@ -1510,6 +1530,11 @@
         "res": true
     },
     "GET /task/raw/:task": {
+        "body": false,
+        "query": false,
+        "res": true
+    },
+    "GET /task/raw/:task/version/:version": {
         "body": false,
         "query": false,
         "res": true

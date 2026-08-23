@@ -26,9 +26,9 @@ import GeolocateControl from '../lib/geolocate/main.ts';
 import RoutingControl from '../lib/routing/main.ts';
 import type { NavigationState, NavigationDirection } from '../lib/routing/main.ts';
 import { syncPushToken } from '../base/push.ts';
-import { normalizePointType } from '../base/utils/point-type.ts';
-import { WorkerMessageType, LocationState } from '../base/events.ts';
-import type { WorkerMessage } from '../base/events.ts';
+import { normalizePointType } from '../utils/point-type.ts';
+import { WorkerMessageType, LocationState } from '../utils/events.ts';
+import type { WorkerMessage } from '../utils/events.ts';
 import Overlay from '../base/overlay-class.ts';
 import OverlayManager from '../base/overlay.ts';
 import { FeatureVisibility } from './modules/feature-visibility.ts';
@@ -37,11 +37,11 @@ import { stdurl, server, getRuntimeToken, serverUrl } from '../std.js';
 import * as mapgl from 'maplibre-gl'
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import type Atlas from '../workers/atlas.ts';
-import { CloudTAKTransferHandler } from '../base/handler.ts';
+import { CloudTAKTransferHandler } from '../workers/handler.ts';
 import ProfileConfig from '../base/profile.ts';
 import Config from '../base/config.ts';
-import { isNativePlatform, addBackgroundStateListener, whenForegrounded } from '../base/capacitor.ts';
-import { withTimeout } from '../base/async.ts';
+import { isNativePlatform, addBackgroundStateListener, whenForegrounded } from '../utils/capacitor.ts';
+import { withTimeout } from '../utils/async.ts';
 import { db, recoverDatabase } from '../database.ts';
 
 import type { ProfileOverlay, Basemap, Feature } from '../types.ts';
@@ -50,6 +50,28 @@ import type { Position } from '@capacitor/geolocation';
 
 // Missions the dirty sweep has already warned about having no overlay
 const sweepWarned = new Set<string>();
+const MAPLIBRE_WORKER_PROBE_TIMEOUT_MS = 1000;
+const MAPLIBRE_WORKER_PROBE_URL = new URL('/maplibre-worker-probe.mjs', window.location.href).href;
+const COT_SOURCE_RESYNC_TIMEOUT_MS = 10000;
+const MAPLIBRE_RECOVERY_RELOAD_KEY = 'cloudtak::maplibre-recovery-reloaded';
+
+function reloadAfterMapLibreFailure(error: unknown): void {
+    try {
+        if (sessionStorage.getItem(MAPLIBRE_RECOVERY_RELOAD_KEY)) {
+            console.error('MapLibre recovery still failing after automatic reload', error);
+            return;
+        }
+
+        sessionStorage.setItem(MAPLIBRE_RECOVERY_RELOAD_KEY, '1');
+    } catch (guardErr) {
+        console.warn('MapLibre reload guard unavailable, skipping automatic reload', guardErr);
+        return;
+    }
+
+    // The map uses hash:true, so reloading retains its camera.
+    console.error('MapLibre recovery failed - reloading the WebView', error);
+    window.location.reload();
+}
 
 function waitForAtlasWorkerReady(worker: Worker): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -93,6 +115,7 @@ export const useMapStore = defineStore('cloudtak', {
         _cotResync?: Promise<void>;
         _removeBackgroundStateListener?: () => void;
         _removePushTokenListener?: () => void;
+        _lastLocationHttpSubmit?: number;
 
         channel: BroadcastChannel;
 
@@ -749,10 +772,15 @@ export const useMapStore = defineStore('cloudtak', {
 
                 const features = await this.worker.db.snapshot();
 
-                source.setData({
-                    type: 'FeatureCollection',
-                    features
-                });
+                try {
+                    await withTimeout(source.setData({
+                        type: 'FeatureCollection',
+                        features
+                    }), COT_SOURCE_RESYNC_TIMEOUT_MS, 'MapLibre CoT source resync');
+                } catch (err) {
+                    if (!isNativePlatform()) throw err;
+                    reloadAfterMapLibreFailure(err);
+                }
             })().finally(() => {
                 this._cotResync = undefined;
             });
@@ -846,6 +874,19 @@ export const useMapStore = defineStore('cloudtak', {
             if (this._resumeRecovery) return this._resumeRecovery;
 
             this._resumeRecovery = (async () => {
+                if (isNativePlatform() && this._map) {
+                    try {
+                        await withTimeout(
+                            mapgl.importScriptInWorkers(MAPLIBRE_WORKER_PROBE_URL),
+                            MAPLIBRE_WORKER_PROBE_TIMEOUT_MS,
+                            'MapLibre worker response check'
+                        );
+                    } catch (err) {
+                        reloadAfterMapLibreFailure(err);
+                        return;
+                    }
+                }
+
                 try {
                     await recoverDatabase();
                 } catch (err) {
@@ -894,6 +935,15 @@ export const useMapStore = defineStore('cloudtak', {
             let initialFire = true;
             this._removeBackgroundStateListener = await addBackgroundStateListener((isBackgrounded) => {
                 this.isBackgrounded = isBackgrounded;
+
+                // A new suspension gets its own recovery attempt.
+                if (isBackgrounded && isNativePlatform()) {
+                    try {
+                        sessionStorage.removeItem(MAPLIBRE_RECOVERY_RELOAD_KEY);
+                    } catch (err) {
+                        console.warn('Failed to reset MapLibre reload guard', err);
+                    }
+                }
 
                 // The initial fire only syncs state - running recovery there
                 // would race boot's own database open
@@ -1058,6 +1108,7 @@ export const useMapStore = defineStore('cloudtak', {
                     'map::pitch',
                     'map::bearing',
                     'map::basemap',
+                    'map::basemap::favs',
                     'map::terrain'
                 ], {
                     defaults: {
@@ -1066,6 +1117,7 @@ export const useMapStore = defineStore('cloudtak', {
                         'map::pitch': 0,
                         'map::bearing': 0,
                         'map::basemap': null,
+                        'map::basemap::favs': null,
                         'map::terrain': null
                     }
                 });
@@ -1229,6 +1281,16 @@ export const useMapStore = defineStore('cloudtak', {
         },
 
         submitLocationHttp: async function(position: Position): Promise<void> {
+            // Throttle to the user's location reporting frequency
+            // (tak_loc_freq) - the background watcher can deliver fixes far
+            // faster than the profile asks the server to be updated
+            const freq = Number((await ProfileConfig.get('tak_loc_freq'))?.value) || 5000;
+            const now = Date.now();
+            if (this._lastLocationHttpSubmit !== undefined && now - this._lastLocationHttpSubmit < freq) {
+                return;
+            }
+            this._lastLocationHttpSubmit = now;
+
             try {
                 const body = {
                     longitude: position.coords.longitude,

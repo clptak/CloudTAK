@@ -81,13 +81,13 @@
         :style='standalone ? "height: calc(100vh - 64px - var(--map-bottom-bar-size, 0px)); max-height: 100%;" : "min-height: 0"'
     >
         <div
-            class='col-12 cloudtak-bg flex-shrink-0'
+            class='col-12 cloudtak-header flex-shrink-0'
             :style='`z-index: ${zindex};`'
             style='
                 border-radius: 0px;
             '
             :class='{
-                "border-bottom border-light": border
+                "border-bottom": border
             }'
         >
             <div class='card-header d-flex align-items-center py-2 px-0 mx-2 flex-wrap row-gap-2'>
