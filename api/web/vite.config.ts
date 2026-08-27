@@ -176,6 +176,8 @@ export default defineConfig(() => {
                             req.url = '/video.html';
                         } else if (req.url?.startsWith('/board') && !path.extname(req.url)) {
                             req.url = '/board.html';
+                        } else if (req.url?.startsWith('/docs') && !path.extname(req.url)) {
+                            req.url = '/docs.html';
                         }
                         next();
                     });

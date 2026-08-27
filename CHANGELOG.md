@@ -17,6 +17,62 @@
 
 ### Pending Release
 
+### v13.74.0 - 2026-08-26
+
+> [!WARNING]
+> If Using Connection API Tokens, the PR introduces the first version of API scopes
+> Layer ETLs are excempted from this change but connection tokens will need to be updated
+> with relevant scopes to continue working
+
+- :rocket: Introduce API Scopes to allow layer API Tokens to make calls to non-layer APIs
+- :rocket: Switch to Scalar API Docs which better surface authentication requirements than the earlier swagger UI
+
+### v13.73.1 - 2026-08-26
+
+- :bug: Don't display out of bounds or unknown alt - Closes: https://github.com/dfpc-coe/CloudTAK/issues/1707
+
+### v13.73.0 - 2026-08-26
+
+- :rocket: Introduce consistent puck colours with ATAK
+
+### v13.72.7 - 2026-08-26
+
+- :tada: Introduce Shapefile support for the Events Task
+
+### v13.72.6 - 2026-08-25
+
+- :rocket: Add Admin Hover effect to open Admin Menu
+- :rocket: Add Search Bar to Admin Integrations Page
+- :rocket: Make Overlays IndexDB backed so they immediately receive updates after an AtlasSync
+
+### v13.72.5 - 2026-08-25
+
+- :rocket: Add database support for outgoing subscription types
+
+### v13.72.4 - 2026-08-25
+
+- :bug: Call `.wrap()` on MapLibre coordinates to ensure +/-180 longitude values are handled correctly along the antimeridian
+
+### v13.72.3 - 2026-08-24
+
+- :rocket: Tie into Certificate.validate in node-tak for certificate validation
+
+### v13.72.2 - 2026-08-24
+
+- :bug: TAK Server HTML error pages (Tomcat "Exception Report" documents) are no longer surfaced verbatim as the error message - the API now returns the human readable `Message` from the page and passes the full plain-text breakdown (status, description & exception trace) through as an optional `details` field on `StandardResponse` which the UI shows in the error modal's "Advanced" dropdown. Requires `@tak-ps/node-tak` with `TAKServerError` support
+
+### v13.72.1 - 2026-08-24
+
+- :bug: Fix Injector Deletion - Closes dfpc-coe/CloudTAK#1687
+
+### v13.72.0 - 2026-08-24
+
+- :tada: Add certificate information to User APIs
+
+### v13.71.0 - 2026-08-24
+
+- :tada: Introduce concept of Forms & requirements on an Event Board column
+
 ### v13.70.0 - 2026-08-19
 
 - :tada: Allow a server admin to specify Basemap Favourites
@@ -107,7 +163,7 @@
 
 ### v13.63.0 - 2026-08-07
 
-- :tada: Introduce concept of CoreDevice to augment CoreEvent data structure 
+- :tada: Introduce concept of CoreDevice to augment CoreEvent data structure
 - :bug: Fix feature display with use of `maxzoom` limitation - Closes: https://github.com/dfpc-coe/CloudTAK/issues/1642
 
 ### v13.62.0 - 2026-08-05

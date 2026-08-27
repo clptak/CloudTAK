@@ -1,7 +1,7 @@
 {
     "name": "@tak-ps/cloudtak",
     "type": "module",
-    "version": "13.70.0",
+    "version": "13.74.0",
     "types": "dist/types/plugin.d.ts",
     "files": [
         "dist/types"
@@ -29,6 +29,7 @@
         "type": "git",
         "url": "git+https://github.com/dfpc-coe/CloudTAK.git"
     },
+    "license": "AGPL-3.0-only",
     "dependencies": {
         "@capacitor-community/keep-awake": "^8.0.1",
         "@capacitor-firebase/messaging": "^8.2.0",
@@ -50,6 +51,7 @@
         "@fullcalendar/core": "^6.1.21",
         "@fullcalendar/daygrid": "^6.1.21",
         "@mapbox/tile-cover": "^3.0.2",
+        "@scalar/api-reference": "^1.66.1",
         "@simplewebauthn/browser": "^13.3.0",
         "@tabler/core": "^1.4.0",
         "@tabler/icons-vue": "^3.0.0",
@@ -72,6 +74,7 @@
         "@turf/meta": "^7.2.0",
         "@turf/nearest-point-on-line": "^7.3.4",
         "@turf/point-on-feature": "^7.0.0",
+        "@unhead/vue": "^2.1.17",
         "@ver0/deep-equal": "^2.0.1",
         "@vueuse/core": "^14.0.0",
         "autosize": "^6.0.1",
@@ -96,7 +99,6 @@
         "rxjs": "^7.8.2",
         "showdown": "^2.1.0",
         "sortablejs": "^1.15.2",
-        "swagger-ui-dist": "^5.30.2",
         "terra-draw": "^1.22.0",
         "terra-draw-maplibre-gl-adapter": "^1.4.1",
         "terra-draw-route-snap-mode": "^0.4.1",
@@ -114,7 +116,6 @@
         "@testing-library/vue": "^8.1.0",
         "@types/mapbox__tile-cover": "^3.0.4",
         "@types/sortablejs": "^1.15.8",
-        "@types/swagger-ui": "^5.21.1",
         "@vitejs/plugin-vue": "^6.0.0",
         "@vitest/coverage-v8": "^4.1.0",
         "@vitest/ui": "^4.1.0",

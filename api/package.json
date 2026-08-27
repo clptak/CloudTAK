@@ -1,7 +1,7 @@
 {
     "name": "@tak-ps/CloudTAK.api",
     "type": "module",
-    "version": "13.70.0",
+    "version": "13.74.0",
     "description": "Facilitate ETL operations to bring non-TAK sources into a TAK Server",
     "main": "index.js",
     "scripts": {
@@ -28,7 +28,7 @@
         "url": "git+https://github.com/dfpc-coe/CloudTAK.git"
     },
     "author": "Nick Ingalls <nick@ingalls.ca>",
-    "license": "ISC",
+    "license": "AGPL-3.0-only",
     "dependencies": {
         "@archiver/archiver": "^0.1.0",
         "@aws-sdk/client-cloudformation": "^3.279.0",
@@ -49,14 +49,14 @@
         "@maplibre/maplibre-gl-style-spec": "^26.0.0",
         "@openaddresses/batch-error": "^2.13.1",
         "@openaddresses/batch-generic": "^25.0.0",
-        "@openaddresses/batch-schema": "^10.21.0",
+        "@openaddresses/batch-schema": "^10.28.0",
         "@openaddresses/cloudfriend": "^7.0.0",
         "@simplewebauthn/server": "^13.3.0",
         "@sinclair/typebox": "^0.34.52",
-        "@tak-ps/etl": "^10.11.0",
+        "@tak-ps/etl": "^10.15.0",
         "@tak-ps/node-cot": "^14.50.0",
         "@tak-ps/node-safeurl": "^1.5.0",
-        "@tak-ps/node-tak": "^12.24.0",
+        "@tak-ps/node-tak": "^12.26.1",
         "@turf/bbox": "^7.1.0",
         "@turf/bbox-polygon": "^7.2.0",
         "@turf/meta": "^7.0.0",

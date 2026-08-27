@@ -221,7 +221,7 @@ export default async function router(schema: Schema, config: ConfigStateless) {
             alarm_evals: Type.Optional(Type.Integer()),
             alarm_points: Type.Optional(Type.Integer()),
             protected: Type.Boolean({ default: false }),
-            permissions: Type.Optional(Type.Union([Type.Null(), Type.Array(Type.String())], {
+            permissions: Type.Optional(Type.Array(Type.String(), {
                 description: 'Permissions granted to the Layer as <permission>:<level> pairs - ie video:read or video:*',
             })),
             incoming: Type.Optional(Type.Object({
@@ -757,7 +757,7 @@ export default async function router(schema: Schema, config: ConfigStateless) {
             alarm_evals: Type.Optional(Type.Integer()),
             alarm_points: Type.Optional(Type.Integer()),
 
-            permissions: Type.Optional(Type.Union([Type.Null(), Type.Array(Type.String())], {
+            permissions: Type.Optional(Type.Array(Type.String(), {
                 description: 'Permissions granted to the Layer as <permission>:<level> pairs - ie video:read or video:*',
             })),
         }),
@@ -781,6 +781,11 @@ export default async function router(schema: Schema, config: ConfigStateless) {
                 }
             } else {
                 const auth = await Auth.is_connection(config, req, { resources }, req.params.connectionid);
+
+                if (req.body.permissions !== undefined && auth.layer) {
+                    throw new Err(403, null, 'Layer tokens cannot modify Layer permissions');
+                }
+
                 connection = auth.connection;
                 layer = await layerControl.from(connection, req.params.layerid);
             }

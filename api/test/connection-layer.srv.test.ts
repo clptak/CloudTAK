@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert';
 import { sql, eq } from 'drizzle-orm';
 import { ConnectionFeature, VideoLease } from '../common/schema.js';
+import jwt from 'jsonwebtoken';
 import Flight from './flight.js';
 import Sinon from 'sinon';
 import {
@@ -127,7 +128,7 @@ test('POST: api/connection/1/layer', async () => {
             id: 1,
             uuid: '123',
             priority: 'off',
-            permissions: null,
+            permissions: [],
             template: false,
             created: '2025-06-26',
             updated: '2025-06-26',
@@ -180,7 +181,7 @@ test('GET: api/connection/1/layer/1', async () => {
             id: 1,
             uuid: '123',
             priority: 'off',
-            permissions: null,
+            permissions: [],
             template: false,
             created: '2025-06-26',
             updated: '2025-06-26',
@@ -236,7 +237,7 @@ test('PATCH: api/connection/1/layer/1 - set protected', async () => {
             id: 1,
             uuid: '123',
             priority: 'off',
-            permissions: null,
+            permissions: [],
             template: false,
             created: '2025-06-26',
             updated: '2025-06-26',
@@ -306,7 +307,7 @@ test('PATCH: api/connection/1/layer/1 - unset protected', async () => {
             id: 1,
             uuid: '123',
             priority: 'off',
-            permissions: null,
+            permissions: [],
             template: false,
             created: '2025-06-26',
             updated: '2025-06-26',
@@ -354,11 +355,11 @@ test('PATCH: api/connection/1/layer/1 - set permissions', async () => {
                 bearer: flight.token.admin,
             },
             body: {
-                permissions: null,
+                permissions: [],
             },
         }, true);
 
-        assert.equal(unset.body.permissions, null);
+        assert.deepEqual(unset.body.permissions, []);
     } catch (err) {
         assert.ifError(err);
     }
@@ -377,7 +378,33 @@ test('PATCH: api/connection/1/layer/1 - invalid permissions', async () => {
         }, false);
 
         assert.equal(res.status, 400);
-        assert.ok(String(res.body.message).startsWith('Unknown Layer Permission: feature:read'));
+        assert.ok(String(res.body.message).startsWith('Unknown Permission: feature:read'));
+    } catch (err) {
+        assert.ifError(err);
+    }
+});
+
+test('PATCH: api/connection/1/layer/1 - layer token cannot modify permissions', async () => {
+    try {
+        const token = 'etl.' + jwt.sign({ access: 'layer', id: 1, internal: true }, 'coe-wildland-fire');
+
+        const res = await flight.fetch('/api/connection/1/layer/1', {
+            method: 'PATCH',
+            auth: { bearer: token },
+            body: { permissions: ['video:*'] },
+        }, false);
+
+        assert.equal(res.status, 403);
+        assert.equal(res.body.message, 'Layer tokens cannot modify Layer permissions');
+
+        const allowed = await flight.fetch('/api/connection/1/layer/1', {
+            method: 'PATCH',
+            auth: { bearer: token },
+            body: { description: 'Updated by Layer Token' },
+        }, true);
+
+        assert.equal(allowed.body.description, 'Updated by Layer Token');
+        assert.deepEqual(allowed.body.permissions, []);
     } catch (err) {
         assert.ifError(err);
     }
