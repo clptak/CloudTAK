@@ -17,6 +17,15 @@
 
 ### Pending Release
 
+### v13.74.2 - 2026-08-27
+
+- :bug: The user's token should never be saved in the tile URL when creating an overlay from a hosted tileset - Closes: https://github.com/dfpc-coe/CloudTAK/issues/1683
+
+### v13.74.1 - 2026-08-27
+
+- :rocket: Keep profile WS online across brief drops
+- :rocket: Add POST location updates to profile service
+
 ### v13.74.0 - 2026-08-26
 
 > [!WARNING]
