@@ -9,7 +9,6 @@
 
 import { v4 as randomUUID } from 'uuid';
 import { Preferences } from '@capacitor/preferences';
-import { CapacitorHttp } from '@capacitor/core';
 import { defineStore } from 'pinia'
 import { markRaw } from 'vue';
 import { liveQuery } from 'dexie';
@@ -17,7 +16,7 @@ import DrawTool, { DrawToolMode } from './modules/draw.ts';
 import IconManager from './modules/icons.ts';
 import MenuManager from './modules/menu.ts';
 import BottomBarManager from './modules/bottombar.ts';
-import { useDeviceStore } from './device.ts';
+import { useDeviceStore, type BatteryInfo, type NativeDeliveryOptions } from './device.ts';
 import { useAppStore } from './app.ts';
 import * as Comlink from 'comlink';
 import AtlasWorker from '../workers/atlas.ts?worker&url';
@@ -34,7 +33,7 @@ import Overlay from '../base/overlay-class.ts';
 import OverlayManager from '../base/overlay.ts';
 import { FeatureVisibility } from './modules/feature-visibility.ts';
 import Subscription from '../base/subscription.ts';
-import { stdurl, server, getRuntimeToken, serverUrl } from '../std.js';
+import { stdurl, getRuntimeToken, serverUrl } from '../std.js';
 import * as mapgl from 'maplibre-gl'
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import type Atlas from '../workers/atlas.ts';
@@ -45,7 +44,7 @@ import { isNativePlatform, addBackgroundStateListener, whenForegrounded } from '
 import { withTimeout } from '../utils/async.ts';
 import { db, recoverDatabase } from '../database.ts';
 
-import type { ProfileOverlay, Basemap, Feature } from '../types.ts';
+import type { ProfileOverlay, Feature } from '../types.ts';
 import type { LngLat, LngLatLike, Point, MapMouseEvent, MapTouchEvent, MapGeoJSONFeature, GeoJSONSource, LayerSpecification, PropertyValueSpecification } from 'maplibre-gl';
 import type { Position } from '@capacitor/geolocation';
 
@@ -119,7 +118,6 @@ export const useMapStore = defineStore('cloudtak', {
         _overlaySubscription?: { unsubscribe: () => void };
         _overlayReconcile?: Promise<void>;
         _overlayReconcileQueued?: boolean;
-        _lastLocationHttpSubmit?: number;
 
         channel: BroadcastChannel;
 
@@ -279,6 +277,26 @@ export const useMapStore = defineStore('cloudtak', {
     actions: {
         startLocationWatch: async function() {
             const deviceStore = useDeviceStore();
+
+            // Native code POSTs each fix to the location endpoint itself,
+            // throttled to the user's reporting frequency - background
+            // reporting must not depend on the WebView, which iOS suspends.
+            let native: NativeDeliveryOptions | undefined;
+            if (isNativePlatform()) {
+                const freq = Number((await ProfileConfig.get('tak_loc_freq'))?.value) || 5000;
+                const token = await getRuntimeToken();
+                native = {
+                    url: `${serverUrl}/api/profile/location`,
+                    ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+                    minIntervalMs: freq
+                };
+            }
+
+            // Without a distance filter fixes can arrive every second - don't
+            // pay a native bridge call for battery state on each one
+            let battery: BatteryInfo = { level: null, charging: null };
+            let batteryAt = 0;
+
             await deviceStore.geolocation.startWatch(async (position: Position) => {
                 if (this.manualLocationMode) return;
 
@@ -294,7 +312,10 @@ export const useMapStore = defineStore('cloudtak', {
 
                 // Battery state rides along with each location broadcast so the
                 // self CoT can report it to the TAK Server
-                const battery = await deviceStore.battery.info();
+                if (Date.now() - batteryAt > 30000) {
+                    battery = await deviceStore.battery.info();
+                    batteryAt = Date.now();
+                }
 
                 try {
                     this.channel.postMessage({
@@ -315,11 +336,7 @@ export const useMapStore = defineStore('cloudtak', {
                     // channel may be closed during teardown
                     console.error(err);
                 }
-
-                if (isNativePlatform() && this.isBackgrounded) {
-                    void this.submitLocationHttp(position);
-                }
-            });
+            }, native);
         },
         syncGeolocateControl: function() {
             if (!this._map) return;
@@ -543,58 +560,15 @@ export const useMapStore = defineStore('cloudtak', {
                 }
             }
         },
-        // TODO: Convert to overlay
-        addTerrain: async function(): Promise<void> {
-            const cfg = await Config.list(['map::terrain'], { defaults: { 'map::terrain': null } });
-            const terrainId = cfg['map::terrain'] ? Number(cfg['map::terrain']) : null;
-            if (!terrainId) return;
-            if (this.map.getSource('-2')) return;
-
-            const terrainRes = await server.GET('/api/basemap/{:basemapid}', {
-                params: { path: { ':basemapid': terrainId } }
-            });
-            if (terrainRes.error) throw new Error(terrainRes.error.message);
-            const terrain = terrainRes.data as Basemap;
-
-            if (terrain.type !== 'raster-dem') {
-                throw new Error(`Terrain basemap ${terrainId} is not a raster-dem type`);
-            }
-
-            const { value: token } = await Preferences.get({ key: 'token' });
-            const terrainUrl = stdurl(`/api/basemap/${terrain.id}/tiles`);
-            if (token) terrainUrl.searchParams.set('token', token);
-
-            const source: { type: 'raster-dem'; url: string; tileSize?: number; encoding?: 'mapbox' | 'terrarium' } = {
-                type: 'raster-dem',
-                url: String(terrainUrl)
-            };
-
-            if (terrain.tilesize) source.tileSize = terrain.tilesize;
-            if (terrain.encoding) source.encoding = terrain.encoding;
-
-            this.map.addSource('-2', source);
-
-            this.map.setTerrain({
-                source: '-2',
-                exaggeration: 1.5
-            });
-
-            this.terrainEnabled = true;
-            this.map.setGlobalStateProperty('3d', true);
-
-            if (this.map.getPitch() === 0) {
-                this.map.easeTo({ pitch: 45 });
-            }
+        terrainOverlay: function(): Overlay | undefined {
+            return OverlayManager.loaded.find((overlay) => overlay.type === 'raster-dem' && !overlay._destroyed);
         },
 
-        removeTerrain: function(): void {
-            this.map.setTerrain(null);
-            this.map.removeSource('-2');
+        toggleTerrain: async function(): Promise<void> {
+            const overlay = this.terrainOverlay();
+            if (!overlay) return;
 
-            this.terrainEnabled = false;
-            this.map.setGlobalStateProperty('3d', false);
-
-            this.map.easeTo({ pitch: 0 });
+            await overlay.update({ visible: !overlay.visible });
         },
 
         returnHome: async function(): Promise<void> {
@@ -1107,8 +1081,7 @@ export const useMapStore = defineStore('cloudtak', {
                     'map::pitch',
                     'map::bearing',
                     'map::basemap',
-                    'map::basemap::favs',
-                    'map::terrain'
+                    'map::basemap::favs'
                 ], {
                     defaults: {
                         'map::center': '-100,40',
@@ -1116,8 +1089,7 @@ export const useMapStore = defineStore('cloudtak', {
                         'map::pitch': 0,
                         'map::bearing': 0,
                         'map::basemap': null,
-                        'map::basemap::favs': null,
-                        'map::terrain': null
+                        'map::basemap::favs': null
                     }
                 });
 
@@ -1171,6 +1143,21 @@ export const useMapStore = defineStore('cloudtak', {
             this.loadingStage = 'Creating map…';
             mapgl.setWorkerUrl(maplibreWorkerUrl);
             const map = new mapgl.Map(init);
+
+            // Tag TileJSON load failures onto the owning overlay; per-tile 404s are not errors
+            map.on('error', (e) => {
+                const { sourceId, tile } = e as unknown as { sourceId?: string; tile?: unknown };
+                const error = e.error instanceof Error ? e.error : new Error(String(e.error));
+                console.error(error);
+
+                if (!sourceId || tile) return;
+
+                const id = Number(sourceId);
+                if (!Number.isFinite(id)) return;
+
+                const overlay = OverlayManager.loaded.find((o) => o.id === id);
+                if (overlay && !overlay._error) overlay._error = error;
+            });
 
             const scaleControl = new mapgl.ScaleControl({
                 maxWidth: 100,
@@ -1279,47 +1266,6 @@ export const useMapStore = defineStore('cloudtak', {
             this.loadingStage = '';
         },
 
-        submitLocationHttp: async function(position: Position): Promise<void> {
-            // Throttle to the user's location reporting frequency
-            // (tak_loc_freq) - the background watcher can deliver fixes far
-            // faster than the profile asks the server to be updated
-            const freq = Number((await ProfileConfig.get('tak_loc_freq'))?.value) || 5000;
-            const now = Date.now();
-            if (this._lastLocationHttpSubmit !== undefined && now - this._lastLocationHttpSubmit < freq) {
-                return;
-            }
-            this._lastLocationHttpSubmit = now;
-
-            try {
-                const body = {
-                    longitude: position.coords.longitude,
-                    latitude: position.coords.latitude,
-                    ...(position.coords.altitude !== null ? { altitude: position.coords.altitude } : {}),
-                    accuracy: position.coords.accuracy,
-                    ...(position.coords.altitudeAccuracy !== null ? { altitudeAccuracy: position.coords.altitudeAccuracy } : {}),
-                    ...(position.coords.speed !== null ? { speed: position.coords.speed } : {}),
-                    ...(position.coords.heading !== null ? { bearing: position.coords.heading } : {}),
-                    time: position.timestamp,
-                };
-
-                // Use CapacitorHttp for native background requests to avoid WebView throttling
-                if (isNativePlatform()) {
-                    const token = await getRuntimeToken();
-                    await CapacitorHttp.put({
-                        url: `${serverUrl}/api/profile/location`,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                        },
-                        data: body
-                    });
-                } else {
-                    await server.PUT('/api/profile/location', { body });
-                }
-            } catch (err) {
-                console.warn('Failed to submit background location via HTTP', err);
-            }
-        },
         initOverlays: async function() {
             if (!this.map) throw new Error('Cannot initLayers before map has loaded');
 
@@ -1787,21 +1733,9 @@ export const useMapStore = defineStore('cloudtak', {
             this.map.setPaintProperty('background', 'background-color', color);
         },
         updateAttribution: async function(): Promise<void> {
-            const attributionPromises = OverlayManager.visibleBasemaps().map(async (overlay) => {
-                    try {
-                        const basemapRes = await server.GET('/api/basemap/{:basemapid}', {
-                            params: { path: { ':basemapid': Number(overlay.mode_id) } }
-                        });
-                        if (basemapRes.error) return null;
-                        return (basemapRes.data as Basemap).attribution;
-                    } catch (err) {
-                        console.warn('Failed to load basemap attribution:', err);
-                        return null;
-                    }
-                });
-
-            const results = await Promise.all(attributionPromises);
-            const attributions = results.filter((a): a is string => !!a);
+            const attributions = OverlayManager.visibleBasemaps()
+                .map((overlay) => overlay.attribution)
+                .filter((a): a is string => !!a);
 
             const attributionContainer = document.querySelector('.maplibregl-ctrl-attrib-inner');
             if (attributionContainer && attributions.length > 0) {

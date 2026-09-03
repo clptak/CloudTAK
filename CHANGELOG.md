@@ -17,6 +17,33 @@
 
 ### Pending Release
 
+### v13.78.0 - 2026-09-02
+
+- :tada: Migrate the CloudTAK video player to video.js with WebRTC (WHEP) playback via media-infra as the default for RTSP/RTMP/SRT leases, falling back to HLS. Proxied HLS sources retain HLS as their default
+- :rocket: Populate read/write credentials in the WebRTC protocol URL of a lease, consistent with HLS
+- :bug: Pause HLS playback while the buffering overlay is shown instead of letting it run the buffer dry, and leave user initiated pauses alone
+- :rocket: Detect stalled WebRTC streams via the decoded frame counter & track mute state, falling back to HLS immediately when WebRTC never connects
+- :rocket: `API` Return the lease `proxy` source from `/api/video/active` so the player can choose the correct default protocol
+- :bug: Always show the Read/Publish selector in the Video Lease modal - SRT URLs differ by mode even when read/write security is disabled
+
+### v13.77.1 - 2026-08-31
+
+- :tada: Introduce fully native background location reporting
+
+### v13.77.0 - 2026-08-31
+
+- :tada: Introduce Offline TileJSON cache
+
+### v13.76.0 - 2026-08-30
+
+- :rocket: Move Attribution into Profile Overlay to further reduce needed API calls on startup
+- :rocket: TimeZone corrections for SunCalc - Closes: https://github.com/dfpc-coe/CloudTAK/issues/1686
+- :rocket: Use Mission GUID internally when possible
+- :arrow_up: Update to latest node-tak which increases the number of native GUID APIs
+- :bug: `API` Resolve stored Mission tokens by `mode_id` (GUID) instead of the Mission display name when looking up a user's Data Sync subscription - the web client has passed GUIDs to these endpoints since the route migration so the name lookup never matched
+- :rocket: `API` Subscribe user connections to Data Syncs by GUID on connect
+- :rocket: `API` Store the TAK Server Mission GUID on Data Syncs (`data.mission_guid`, populated on create & backfilled on next sync) and address the Mission by GUID for all Data Sync, Layer & Asset calls
+
 ### v13.75.1 - 2026-08-28
 
 - :rocket: Add Touch Support for Lasso Mode
