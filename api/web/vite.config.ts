@@ -234,7 +234,7 @@ export default defineConfig(() => {
             coverage: {
                 provider: 'v8',
                 reporter: ['text', 'lcov'],
-                include: ['src/**'],
+                include: ['src/**/*.{ts,js,vue}'],
                 exclude: [
                     'src/test/**',
                     '**/*.spec.ts',
