@@ -4027,121 +4027,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/connection/{:connectionid}/channel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List channels that a given connection is broadcasting to */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description No Description */
-                    ":connectionid": number;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Successful Response */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            version: string;
-                            type: string;
-                            data: unknown;
-                            messages?: string[];
-                            nodeId?: string;
-                        };
-                    };
-                };
-                /** @description Error Response */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            status: number;
-                            message: string;
-                            /** @description Extended error details (ie: TAK Server exception trace) */
-                            details?: string;
-                        };
-                    };
-                };
-                /** @description Error Response */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            status: number;
-                            message: string;
-                            /** @description Extended error details (ie: TAK Server exception trace) */
-                            details?: string;
-                        };
-                    };
-                };
-                /** @description Error Response */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            status: number;
-                            message: string;
-                            /** @description Extended error details (ie: TAK Server exception trace) */
-                            details?: string;
-                        };
-                    };
-                };
-                /** @description Error Response */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            status: number;
-                            message: string;
-                            /** @description Extended error details (ie: TAK Server exception trace) */
-                            details?: string;
-                        };
-                    };
-                };
-                /** @description Error Response */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            status: number;
-                            message: string;
-                            /** @description Extended error details (ie: TAK Server exception trace) */
-                            details?: string;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/connection/{:connectionid}/data/{:dataid}/asset": {
         parameters: {
             query?: never;
@@ -38939,7 +38824,7 @@ export interface paths {
                     /** @description No Description */
                     limit: number;
                     /** @description No Description */
-                    sort: "id" | "created" | "updated" | "username" | "path" | "name" | "iconset" | "size" | "artifacts" | "enableRLS";
+                    sort: "id" | "created" | "updated" | "username" | "parent" | "path" | "name" | "iconset" | "size" | "artifacts" | "enableRLS";
                     /** @description No Description */
                     filter: string;
                     /** @description Iterate through "pages" of items based on the "limit" query param */
@@ -38969,6 +38854,7 @@ export interface paths {
                                 created: string;
                                 updated: string;
                                 username: string;
+                                parent: null | string;
                                 path: string;
                                 name: string;
                                 iconset: null | string;
@@ -39069,6 +38955,7 @@ export interface paths {
                         /** @description Random UUID v4 of uploaded asset */
                         id: string;
                         name: string;
+                        parent?: null | string;
                         /** @default / */
                         path: string;
                         iconset?: null | string;
@@ -39091,6 +38978,7 @@ export interface paths {
                             created: string;
                             updated: string;
                             username: string;
+                            parent: null | string;
                             path: string;
                             name: string;
                             iconset: null | string;
@@ -39307,6 +39195,7 @@ export interface paths {
                 content: {
                     "application/json": {
                         path?: string;
+                        parent?: null | string;
                         artifacts?: {
                             ext: string;
                         }[];
@@ -39328,6 +39217,7 @@ export interface paths {
                             created: string;
                             updated: string;
                             username: string;
+                            parent: null | string;
                             path: string;
                             name: string;
                             iconset: null | string;

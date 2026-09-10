@@ -17,6 +17,20 @@
 
 ### Pending Release
 
+### v13.83.0 - 2026-09-10
+
+- :tada: Add a standalone Forms page (`/forms`) for creating, editing & deleting the Core Forms used by Events and Boards, reachable from the Application Switcher
+- :rocket: Wrap the Advanced section of the Error popup in the Copy field so long error bodies wrap and can be copied for debugging
+- :tada: Complete any Form shared with one of an Event's Channels from the Forms section of the Event view - the Response is linked to the Event
+- :rocket: Rebroadcast the Event CoT when an Event is nominated to, moved between or removed from Board Columns - the Map Event view refetches the Event on the new broadcast so its Column status stays current
+
+### v13.82.0 - 2026-09-09
+
+- :arrow_up: Update `@tak-ps/etl` to v10.17.0 for the `group` permission
+- :arrow_up: Update `@simplewebauthn/server` to v14 - adds ML-DSA passkey algorithms, existing passkeys are unaffected
+- :tada: Add the `group:read` & `group:update` permissions - Connection & Layer tokens must hold them to list & update channels via `/api/marti/group`
+- :rocket: Remove `GET /api/connection/:connectionid/channel` in favour of `GET /api/marti/group` - Connection & Layer tokens infer the Connection from the token, User tokens may pass `?connection=<id>` (`0` for the server certificate)
+
 ### v13.81.1 - 2026-09-09
 
 - :bug: Ensure Draw Tools is shown instead of GPS component
