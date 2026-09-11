@@ -17,6 +17,21 @@
 
 ### Pending Release
 
+### v13.84.1 - 2026-09-11
+
+- :rocket: On mobile present a unified top bar
+- :bug: Ensure long mission names don't cause overlap over the notification bell
+- :bug: Ensure GPS Component doesn't infinitely expand based on callsign name by truncating long callsigns
+- :rocket: Change Data Sync icon based on COTAK user feedback
+
+### v13.84.0 - 2026-09-11
+
+- :tada: Add incoming SCIM 2.0 user provisioning at `/api/scim/v2` - an Identity Provider can list, create, update, deactivate & deprovision CloudTAK users with the `userName`, `name`, `displayName` & `active` attributes
+- :tada: Accept SCIM 2.0 Groups at `/api/scim/v2/Groups` so Identity Providers that always sync groups (authentik) complete without errors - Groups are not stored, the id encodes the group name
+- :tada: Add a SCIM User Provisioning section to the Admin Config page to enable SCIM and set the Bearer Token an Identity Provider must present (`scim::enabled`, `scim::token`)
+- :rocket: Add a `disabled` flag to Profiles - a deprovisioned user has their sessions revoked and cannot log in via password, passkey or API token until reactivated
+- :rocket: `Profile.auth` is now nullable - a `null` auth marks a user that was provisioned (SCIM) but has never logged in, the TAK certificate is issued on their first password login
+
 ### v13.83.1 - 2026-09-10
 
 - :rocket: Add `parent` field to profile overlay for overlay hierarchy and inheritance
