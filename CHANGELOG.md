@@ -14,8 +14,58 @@
 
 - `GET /api/search/reverse/:long/:lat` endpoint is deprecated and will be removed in v14, use `GET /api/search/reverse/:long/:lat/<type>` instead
 - `Layer.template` is deprecated and will be removed
+- ETLs in v14 will be required to declare Named Schemas, single schema support will be removed
 
 ### Pending Release
+
+### v13.88.0 - 2026-09-14
+
+- :tada: Introduce API & UI support for named ETL Schemas allowing multiple data shapes from ETLs
+- :rocket: Update Android App to drop 30s reload to match iOS behavior
+
+### v13.87.2 - 2026-09-14
+
+- :rocket: Show `read-only` state in the CoTView UI if the CoT is part of a READONLY mission
+- :rocket: Performance improvements to Maplibre CoT Rendering pipeline
+
+### v13.87.1 - 2026-09-14
+
+- :bug: Clear our user pucks from the ProfileFeature database
+- :rocket: Stronger protections to ensure user pucks can't be saved to the ProfileFeature store on the backend and UI
+- :rocket: Performance improvements to CoT rendering pipeline by caching Display Stale Time
+
+### v13.87.0 - 2026-09-13
+
+- :rocket: Switch to temporary MapLibre fork that supports refreshing workers for iOS background=>foreground transitions
+- :tada: Introduce new Data Sync feature PUT API
+- :tada: Add `GET /api/proxy/image` to stream remote images from any SSRF-safe public origin & route remote images in the Feature sidebar through it so they are permitted by the CSP
+
+### v13.86.1 - 2026-09-12
+
+- :bug: Stop recreating the iOS WebView after a long background - the WebKit networking-process crash it targeted recovers in place, and every swap leaked the previous WebView (still connected, still writing to IndexedDB) through Capacitor plugin retain cycles
+- :bug: Declare the `remote-notification` background mode on iOS so silent pushes reach the app in the background
+
+### v13.86.0 - 2026-09-12
+
+- :rocket: Redesign the Outgoing Sinks model as `ETLEvents` - streaming CoT Features are now delivered as typed `feature` messages
+- :tada: Deliver `event:create`, `event:update` & `event:delete` ETL Events for Core Event changes to subscribed Outgoing Layers whose Connection shares a Channel with the Event
+- :rocket: Rename the `--no-sinks` CLI flag to `--no-etl-events`
+- :tada: Deliver `board:*`, `board:column:*` & `board:event:*` ETL Events for Board, Column & Event placement changes to subscribed Outgoing Layers whose Connection has the Board's Channel active
+
+### v13.85.0 - 2026-09-11
+
+- :bug: Keep the map usable after a background to foreground transition on mobile - iOS kills the WebView storage process while backgrounded and any IndexedDB request in flight wedged the page for good, stalling boot at "Initializing worker" even after a reload
+- :rocket: Suspend IndexedDB on both threads while backgrounded, pause the refresh & self CoT timers, keep features arriving over the WebSocket in memory & persist them on resume with a mission resync
+- :rocket: Hand the Atlas worker its server URL over `Worker.name` so module evaluation never touches storage & drop the IndexedDB mirror of the URL from boot
+- :rocket: Bound every boot stage & probe storage in the worker so a storage wedge surfaces in seconds, reloading once per background on a stall
+- :rocket: On foreground after 30s load the app into a fresh WKWebView with its own WKProcessPool instead of reloading in place; Android reloads & recreates the WebView on a lost render process
+- :rocket: Remove the in-place resume recovery whose storage probe & reopen were themselves in-flight requests at the worst moment
+- :tada: Enable Safari Web Inspector for the iOS app on TestFlight builds
+- :rocket: Adopt the UIKit scene-based life cycle on iOS (required to launch when built with the iOS 27 SDK)
+
+### v13.84.2 - 2026-09-11
+
+- :bug: Take status bar height into account when routing component is shown
 
 ### v13.84.1 - 2026-09-11
 
