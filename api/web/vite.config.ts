@@ -4,8 +4,8 @@ import path from 'node:path';
 import vue from '@vitejs/plugin-vue'
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
-const milsymbolBrowserBundle = path.resolve(__dirname, 'node_modules/milsymbol/dist/milsymbol.js');
-const webRoot = __dirname;
+const milsymbolBrowserBundle = path.resolve(import.meta.dirname, 'node_modules/milsymbol/dist/milsymbol.js');
+const webRoot = import.meta.dirname;
 
 /** Real paths of plugins/ entries that symlink outside api/web (e.g. ~/dev/lightning). */
 function symlinkedPluginRoots(): string[] {
@@ -140,6 +140,7 @@ function precacheWorkerAssetsPlugin(): Plugin {
                 .sort();
 
             for (const file of workerAssets) {
+                // Namespaced key so these never collide with real Vite entries.
                 manifest[`worker:${file}`] = { file, src: `worker:${file}` };
             }
 
@@ -193,9 +194,9 @@ export default defineConfig(() => {
             alias: [
                 ...symlinkAliases,
                 { find: 'milsymbol', replacement: milsymbolBrowserBundle },
-                { find: '@tak-ps/cloudtak', replacement: path.resolve(__dirname, './plugin.ts') },
-                { find: '@', replacement: path.resolve(__dirname, './src') },
-                { find: '@cloudtak/api-types', replacement: path.resolve(__dirname, '../derived-types.d.ts') },
+                { find: '@tak-ps/cloudtak', replacement: path.resolve(import.meta.dirname, './plugin.ts') },
+                { find: '@', replacement: path.resolve(import.meta.dirname, './src') },
+                { find: '@cloudtak/api-types', replacement: path.resolve(import.meta.dirname, '../derived-types.d.ts') },
             ],
         },
         build: {
@@ -203,14 +204,14 @@ export default defineConfig(() => {
             target: 'esnext',
             rolldownOptions: {
                 input: {
-                    main: path.resolve(__dirname, 'index.html'),
-                    docs: path.resolve(__dirname, 'docs.html'),
-                    video: path.resolve(__dirname, 'video.html'),
-                    board: path.resolve(__dirname, 'board.html'),
-                    forms: path.resolve(__dirname, 'forms.html'),
-                    admin: path.resolve(__dirname, 'admin.html'),
-                    connection: path.resolve(__dirname, 'connection.html'),
-                    setup: path.resolve(__dirname, 'setup.html'),
+                    main: path.resolve(import.meta.dirname, 'index.html'),
+                    docs: path.resolve(import.meta.dirname, 'docs.html'),
+                    video: path.resolve(import.meta.dirname, 'video.html'),
+                    board: path.resolve(import.meta.dirname, 'board.html'),
+                    forms: path.resolve(import.meta.dirname, 'forms.html'),
+                    admin: path.resolve(import.meta.dirname, 'admin.html'),
+                    connection: path.resolve(import.meta.dirname, 'connection.html'),
+                    setup: path.resolve(import.meta.dirname, 'setup.html'),
                 },
             },
         },
