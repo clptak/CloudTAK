@@ -3,7 +3,7 @@ import { Type, Static } from '@sinclair/typebox';
 import * as schemas from './schema.js';
 import { TAKGroup, TAKRole } from '@tak-ps/node-tak/lib/api/types';
 import { Profile_Coordinate, Profile_Projection, Profile_Menu_Visibility, Profile_Zoom, Profile_Style, Profile_Stale, Profile_Distance, Profile_Elevation, Profile_Speed, Profile_Text, Profile_Radiation_Dose, Profile_Wake_Lock } from './enums.js';
-import { VideoLease_SourceType, CoreEventBoardColumn_Type, LayerMapping_Destination } from './enums.js';
+import { VideoLease_SourceType, CoreEventBoardColumn_Type, CoreEventEffect_Status, LayerMapping_Destination } from './enums.js';
 import { Capabilities, InvocationType } from '@tak-ps/etl';
 import { CoreEventSchema, CoreDeviceSchema, CoreEventLinkSchema, CoreEventStyleSchema, withoutHints } from './core-schema.js';
 import { AugmentedData } from './models/Data.js';
@@ -178,7 +178,7 @@ export const CoreEventResponse = Type.Composite([
         mission_guid: Type.Union([Type.Null(), Type.String()], { description: 'GUID of the TAK Server Mission associated with the Event' }),
         created: Type.String(),
         updated: Type.String(),
-        ended: Type.Union([Type.Null(), Type.String()], { description: CoreEventSchema.properties.ended.description }),
+        ended: Type.Union([Type.Null(), Type.String()], { description: 'Time at which the Event ends - a future time keeps the Event active until then' }),
         username: Type.Union([Type.Null(), Type.String()]),
         connection: Type.Union([Type.Null(), Type.Integer()], { description: 'Connection that created the Event if created by a Connection or Layer token' }),
         metadata: Type.Record(Type.String(), Type.Unknown(), { description: 'User defined key/value Event metadata' }),
@@ -273,6 +273,30 @@ export const CoreDeviceResponse = Type.Composite([
         metadata: Type.Record(Type.String(), Type.Unknown(), { description: 'User defined key/value Device metadata' }),
     }),
 ]);
+
+export const CoreEventAssignmentResponse = Type.Object({
+    id: Type.String(),
+    created: Type.String(),
+    updated: Type.String(),
+    event: Type.String({ description: 'Core Event the person is assigned to' }),
+    uid: Type.Union([Type.Null(), Type.String()], { description: 'Username of the assigned Profile if they have one' }),
+    name: Type.String({ description: 'Name of the assigned person' }),
+    role: Type.String({ description: 'Capacity the person manages the Event in - ie: IC, JAG' }),
+    remarks: Type.String(),
+});
+
+export const CoreEventEffectResponse = Type.Object({
+    id: Type.String(),
+    created: Type.String(),
+    updated: Type.String(),
+    started: Type.String({ description: 'Time at which the Device began acting on the Event' }),
+    ended: Type.Union([Type.Null(), Type.String()], { description: 'Time at which the Device stopped acting on the Event' }),
+    event: Type.String({ description: 'Core Event the Device is acting on' }),
+    device: Type.String({ description: 'Core Device acting on the Event' }),
+    action: Type.String({ description: 'What the Device is doing - ie: navigate to, loiter' }),
+    status: Type.Enum(CoreEventEffect_Status),
+    metadata: Type.Record(Type.String(), Type.Unknown(), { description: 'Action specific parameters - ie: loiter radius' }),
+});
 
 export const CoreSchemaSummary = Type.Object({
     id: Type.Enum(LayerMapping_Destination),

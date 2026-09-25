@@ -33,8 +33,8 @@
                         <div class='d-flex align-items-center gap-2'>
                             <StatusDot
                                 class='flex-shrink-0'
-                                :status='row.placement.event.ended ? "Unknown" : "Success"'
-                                :title='row.placement.event.ended ? "Ended" : "Active"'
+                                :status='row.placement.event.active ? "Success" : "Unknown"'
+                                :title='row.placement.event.active ? "Active" : "Ended"'
                             />
                             <span
                                 class='fw-semibold text-truncate event-board-list-name'
@@ -178,6 +178,11 @@ const formWizard = ref<{
 
 /** Re-keying the Column selects snaps a cancelled move's select back to the real Column */
 const selectEpoch = ref(0);
+
+/** True while a move is held in the FormWizard - a background refresh would discard it */
+const busy = computed<boolean>(() => !!formWizard.value);
+
+defineExpose({ busy });
 
 async function moveEvent(row: { column: BoardColumn; placement: CoreEventBoardEvent }, name: string): Promise<void> {
     const target = columns.value.find((column) => column.name === name);
