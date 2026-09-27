@@ -844,6 +844,56 @@
         "query": false,
         "res": true
     },
+    "GET /integration": {
+        "body": false,
+        "query": true,
+        "res": true
+    },
+    "POST /integration": {
+        "body": true,
+        "query": false,
+        "res": true
+    },
+    "DELETE /integration/:integrationid": {
+        "body": false,
+        "query": false,
+        "res": true
+    },
+    "GET /integration/raw": {
+        "body": false,
+        "query": false,
+        "res": true
+    },
+    "GET /integration/raw/:prefix": {
+        "body": false,
+        "query": false,
+        "res": true
+    },
+    "GET /integration/raw/:prefix/version/:version": {
+        "body": false,
+        "query": false,
+        "res": true
+    },
+    "DELETE /integration/raw/:prefix/version/:version": {
+        "body": false,
+        "query": false,
+        "res": true
+    },
+    "GET /integration/:integrationid": {
+        "body": false,
+        "query": false,
+        "res": true
+    },
+    "PATCH /integration/:integrationid": {
+        "body": true,
+        "query": false,
+        "res": true
+    },
+    "GET /integration/:integrationid/readme": {
+        "body": false,
+        "query": false,
+        "res": true
+    },
     "GET /layer": {
         "body": false,
         "query": true,
@@ -905,6 +955,11 @@
         "res": true
     },
     "POST /login": {
+        "body": true,
+        "query": false,
+        "res": true
+    },
+    "POST /login/refresh": {
         "body": true,
         "query": false,
         "res": true
@@ -1639,56 +1694,6 @@
         "query": false,
         "res": true
     },
-    "GET /task": {
-        "body": false,
-        "query": true,
-        "res": true
-    },
-    "POST /task": {
-        "body": true,
-        "query": false,
-        "res": true
-    },
-    "DELETE /task/:taskid": {
-        "body": false,
-        "query": false,
-        "res": true
-    },
-    "GET /task/raw": {
-        "body": false,
-        "query": false,
-        "res": true
-    },
-    "GET /task/raw/:task": {
-        "body": false,
-        "query": false,
-        "res": true
-    },
-    "GET /task/raw/:task/version/:version": {
-        "body": false,
-        "query": false,
-        "res": true
-    },
-    "DELETE /task/raw/:task/version/:version": {
-        "body": false,
-        "query": false,
-        "res": true
-    },
-    "GET /task/:task": {
-        "body": false,
-        "query": false,
-        "res": true
-    },
-    "PATCH /task/:task": {
-        "body": true,
-        "query": false,
-        "res": true
-    },
-    "GET /task/:task/readme": {
-        "body": false,
-        "query": false,
-        "res": true
-    },
     "GET /user": {
         "body": false,
         "query": true,
@@ -1712,6 +1717,11 @@
     "GET /user/:username/session": {
         "body": false,
         "query": true,
+        "res": true
+    },
+    "DELETE /user/:username/session/:session": {
+        "body": false,
+        "query": false,
         "res": true
     },
     "POST /video/auth": {

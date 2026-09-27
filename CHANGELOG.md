@@ -18,6 +18,30 @@
 
 ### Pending Release
 
+### v13.98.1 - 2026-09-25
+
+- :bug: Fix bug related to public vs private iconset creation
+- :bug: Fix bug where FeatureIcon display would differ from the actual map icon display when colors were used
+
+### v13.98.0 - 2026-09-25
+
+- :rocket: Rename the `tasks` table & `/api/task` routes to Integrations - `GET/POST /api/integration`, `GET/PATCH/DELETE /api/integration/:integrationid`, `GET /api/integration/:integrationid/readme` & `/api/integration/raw/:prefix[/version/:version]` - the Admin UI now lives at `/admin/integrations`
+- :rocket: `layers.task` is now a foreign key to `integrations.id` with the version stored in a new `layers.version` column - the Layer API still accepts & returns `task` as `<prefix>-v<version>` and additionally returns `version` & `integration: { name, icon }`; creating or updating a Layer now requires its Integration to be registered & deleting an Integration with active Layers is rejected
+
+### v13.97.0 - 2026-09-25
+
+- :bug: Pin `@tabler/core` to 1.5.1 - 1.6.0 rewrote its color system & swapped the bundled dark palette from cool gray to neutral, which read as brownish
+- :rocket: Mission Layers panel now uses the shared search/sort control with Newest → Oldest (default), Oldest → Newest & Alphabetical sort options applied to both folder contents & search results
+
+### v13.96.0 - 2026-09-25
+
+- :tada: Login tokens now last 8 days by default & `POST /login`, `POST /login/passkey/authenticate` return a `refresh` token which `POST /login/refresh` exchanges for a new token pair - the web client refreshes on every launch & each refresh extends the session by 30 days of inactivity, refresh tokens are single use, stored hashed & a replayed token revokes its session
+- :tada: `login::token::expiry` & `login::refresh::expiry` admin config values (hours) control the login token & session lifetimes
+- :tada: `DELETE /user/:username/session/:session` terminates a login session, revoking its login & refresh tokens - the web client calls it on logout & from the sessions list
+- :rocket: Session tokens derive their access level & disabled state from the Profile on every request rather than from the token claim
+- :rocket: Terminating a session (logout, admin termination, user disable or refresh token reuse) sends a `logout` message to its open WebSocket clients & closes them - the web client wipes local state & returns to login
+- :bug: Editing a Connection that has no channel memberships no longer disables the Save button, which blocked saving a regenerated certificate
+
 ### v13.95.0 - 2026-09-23
 
 - :rocket: `POST /core/event` & `PATCH /core/event/:event` require at least one Channel - an Event can no longer be created or left without being shared with a Channel
