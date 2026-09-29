@@ -18,6 +18,34 @@
 
 ### Pending Release
 
+### v13.100.1 - 2026-09-28
+
+- :bug: Fix permissions required to invoke a layer by email
+
+### v13.100.0 - 2026-09-28
+
+- :tada: ETL Layers can be invoked by email alongside schedules & webhooks - enabling Email Delivery in the Layer Config gives the Layer the address `<layer uuid>@mail.map.<domain>` and each email it receives is delivered to the task. Tasks must be built with `@tak-ps/etl` v10.22.0 or later & list the `Email` invocation
+- :tada: Add Allowed Senders to the Layer Config - a list of addresses or `@domains`, matched against the `From` header, that may email the Layer. An empty list accepts email from any sender
+- :tada: Creating a Layer seeds Email Delivery & its Allowed Senders from `invocations.incoming.email.default` of the task's Capabilities document
+- :tada: Add `email` & `email_senders` to the incoming config accepted by `POST /connection/:connectionid/layer` and `POST/PATCH /connection/:connectionid/layer/:layerid/incoming`
+- :tada: Add `GET /api/config/email` returning the domain Layer email is addressed to - it defaults to `mail.<API host>` & can be set with the `MAIL_DOMAIN` environment variable
+- :rocket: The `mail` CloudFormation stack writes received email to an S3 bucket, expired after `MailExpirationDays`, and routes it to the Layer it is addressed to - the stack must be deployed or updated before Email Delivery is enabled on a Layer & now requires the main CloudTAK stack to exist
+- :bug: `PATCH /connection/:connectionid/layer/:layerid/incoming` deployed the Layer with the config as it was before the update, so a changed schedule or webhooks setting did not take effect until a later deploy
+- :bug: `PATCH /connection/:connectionid/layer/:layerid/incoming` redeployed the Layer whenever `cron` or `webhooks` was in the request, even if the value had not changed
+
+### v13.99.1 - 2026-09-28
+
+- :bug: Refresh search/route manager to ensure most recent config
+
+### v13.99.0 - 2026-09-27
+
+- :tada: Add OpenStreetMap (Photon) search provider supporting forward, suggest & reverse geocoding - enable it & set the Photon URL from the Search Providers section of CloudTAK Settings (`osm::enabled` & `osm::url`)
+- :rocket: Group the ArcGIS Online & OpenStreetMap settings under a single Search Providers section in CloudTAK Settings, showing which providers are active & what they support
+- :rocket: Add a Routing Providers section to CloudTAK Settings - search & routing are now configured independently, each with its own ArcGIS Online credentials (`search::agol::*` & `routing::agol::*`). Existing `agol::*` settings are migrated to both providers on upgrade & each provider now honours its Enabled toggle
+- :rocket: Add a filter to CloudTAK Settings to find a section by its name or the settings it contains & an icon beside each section title
+- :rocket: Add a normalized `type` to search suggest, forward & reverse results (address, street, poi, trailhead, parking, hospital, police, park, peak, locality, region, postal) and show a matching icon in the search dropdown
+- :tada: Add an Admin Overview as the default `/admin` view showing TAK Server status, the configuration state of the Video Server, SCIM, GeoFence Server, Search & Routing providers, and totals for the main admin sections
+
 ### v13.98.1 - 2026-09-25
 
 - :bug: Fix bug related to public vs private iconset creation
