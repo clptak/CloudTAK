@@ -18,6 +18,31 @@
 
 ### Pending Release
 
+- :bug: Fix HTML vs Markdown Detection Parser
+- :tada: Add a `type` Field Mapping widget (`@widget: 'type'` on `common/core-schema.ts` properties) using the MIL-STD-2525E symbol picker from the CoT sidebar to select a fixed Type, or a template
+- :rocket: Move the Event specific `started`, `ended`, `priority` & `location` columns of `core_entity` into a `core_entity_event` side table sharing its primary key - payloads are unchanged, `GET /api/core/event` no longer accepts those columns as `sort`
+
+### v13.101.1 - 2026-09-30
+
+- :rocket: Add a `kind` column to `core_entity` (defaults to `CoreEvent`) and rename the `core_entity_channel.event` column to `entity` - no API change
+
+### v13.101.0 - 2026-09-30
+
+- :rocket: Rename `CoreEvent` to `CoreEntity` throughout the database, server, and web app - API routes, payloads, and the `CoreEvent` Layer Mapping destination are unchanged
+
+### v13.100.4 - 2026-09-30
+
+- :bug: Fix Buffer/Range distance input freezing the page when typing 3+ digits in yards or miles due to a unit conversion feedback loop
+
+### v13.100.3 - 2026-09-30
+
+- :rocket: Reverse order of overlays (basemap on bottom) in MenuOverlays based on user feedback
+- :bug: Fix overlays without layers from corrupting internal maplibre layer order - Closes: https://github.com/dfpc-coe/CloudTAK/issues/1809
+
+### v13.100.2 - 2026-09-29
+
+- :rocket: Add `Area Unit` display preference, defaulting Polygon Area to acres instead of square feet [#1853](https://github.com/dfpc-coe/CloudTAK/issues/1853)
+
 ### v13.100.1 - 2026-09-28
 
 - :bug: Fix permissions required to invoke a layer by email

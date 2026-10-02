@@ -501,6 +501,7 @@
                         <PolygonArea
                             :key='String(route.params.uid)'
                             :cot='cot'
+                            :unit='units.display_area'
                         />
                     </div>
 
@@ -654,9 +655,9 @@
                 />
 
                 <PropertyCreator
-                    v-if='cot.properties.creator'
+                    v-if='cot.creator'
                     :key='cot.properties.id'
-                    :creator='cot.properties.creator'
+                    :creator='cot.creator'
                 />
 
                 <PropertyMetadata
@@ -818,7 +819,8 @@ const share = ref(false);
 const units = ref({
     display_speed: 'mi/h',
     display_elevation: 'feet',
-    display_distance: 'mile'
+    display_distance: 'mile',
+    display_area: 'acre'
 });
 
 const username = ref<string | undefined>();
@@ -899,6 +901,11 @@ onMounted(async () => {
     const displayElevation = await ProfileConfig.get('display_elevation');
     if (displayElevation && displayElevation.value) {
         units.value.display_elevation = displayElevation.value;
+    }
+
+    const displayArea = await ProfileConfig.get('display_area');
+    if (displayArea && displayArea.value) {
+        units.value.display_area = displayArea.value;
     }
 
     interval.value = setInterval(async () => {
@@ -1010,7 +1017,7 @@ async function eventAvailable(event: string): Promise<boolean> {
 }
 
 // UUID of the Core Event a CoT is the projection of, carried on its `p` Link
-function coreEvent(cot: COT): string | undefined {
+function coreEntity(cot: COT): string | undefined {
     const marker = (cot.properties.links || []).find((link) => !!link.event);
     return marker ? marker.event : undefined;
 }
@@ -1029,7 +1036,7 @@ async function load_cot() {
     if (baseCOT) {
         // The Event View is the richer representation but is API-only -
         // offline, the CoT remains the best available view of the Event
-        const event = coreEvent(baseCOT);
+        const event = coreEntity(baseCOT);
         if (event && deviceStore.network.isOnline && await eventAvailable(event)) {
             // replace() so back navigation doesn't immediately redirect again
             await router.replace(`/event/${event}`);

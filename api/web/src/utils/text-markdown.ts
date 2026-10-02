@@ -1,4 +1,5 @@
 const FENCE = /^\s*(```|~~~)/;
+const HTML = /^<(?:[a-z][a-z0-9-]*)(?:\s|>|\/>|$)/i;
 const URL = /(?<![="'(<[])(https?:\/\/[a-z-]+[:.].*?)(?=[\s"|]|$)/g;
 
 /**
@@ -18,14 +19,27 @@ function dedent(lines: string[]): string[] {
 }
 
 /**
- * Prepare free text - CoT Remarks, CoreEvent Remarks, Mission Logs etc. - to be rendered as Markdown
+ * Text that opens with an HTML tag (KML descriptions etc.) is nested markup
+ * where indentation carries no meaning - any residual indent after a blank
+ * line would otherwise become a Markdown code block
+ */
+function stripIndent(lines: string[]): string[] {
+    const first = lines.find((line) => line.trim().length);
+
+    if (!first || !HTML.test(first.trim())) return lines;
+
+    return lines.map((line) => line.trimStart());
+}
+
+/**
+ * Prepare free text - CoT Remarks, CoreEntity Remarks, Mission Logs etc. - to be rendered as Markdown
  *
  * Line structure is left intact so block level Markdown such as tables, lists
  * & headings render. Single line breaks are expected to be preserved by the
  * renderer via `white-space: pre-wrap` on paragraphs
  */
 export function textToMarkdown(text: string | number | undefined | null): string {
-    const lines = dedent(String(text ?? '').replace(/\r\n?/g, '\n').split('\n'));
+    const lines = stripIndent(dedent(String(text ?? '').replace(/\r\n?/g, '\n').split('\n')));
 
     let fenced = false;
 
