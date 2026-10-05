@@ -15,9 +15,42 @@
 - `GET /api/search/reverse/:long/:lat` endpoint is deprecated and will be removed in v14, use `GET /api/search/reverse/:long/:lat/<type>` instead
 - `Layer.template` is deprecated and will be removed
 - ETLs in v14 will be required to declare Named Schemas, single schema support will be removed
+- The Minio Legacy Store will be removed in V14 - Ensure you have migrated to Garage before updating to v14.
+
+### Beta Notice
+
+- CoreEvents & CoreDevices are in beta and functionality may change in minor releases. Use with caution in production environments.
 
 ### Pending Release
 
+### v13.103.2 - 2026-10-05
+
+- :rocket: TAK Server API clients are now built through a shared `TAKServerControl` (`asUser`, `asServer`, `asConnection`) and the CloudTAK client UID through `profileUid`, replacing ~90 inline `TAKAPI.init` calls and 11 inline UID strings
+- :rocket: Profile Overlay rules (unique per url, single basemap, single active mission, mission subscribe/unsubscribe, existence pruning, default basemap & terrain provisioning) now live in a shared `ProfileOverlayControl` used by the overlay, iconset, package & user erase paths and the stateful connection pool
+- :rocket: `POST /api/profile/overlay` is now idempotent - posting an overlay whose URL already exists for the user patches the existing overlay with the supplied fields and returns it instead of failing with a duplicate error
+
+### v13.103.1 - 2026-10-05
+
+- :bug: Ensure File Share Notification CoTs don't end up rendered on the map
+
+### v13.103.0 - 2026-10-02
+
+- :rocket: **Breaking** Replace the Core Event `mission_guid` column with a `missions` array of `{ name, guid }` objects on the `core_entity_event` side table - existing associations are migrated with the GUID as a placeholder name, `POST` & `PATCH /api/core/event` take `missions` in place of `mission_guid`
+- :tada: Core Events can now be associated with multiple TAK Server Missions - the Event Mission panel lists, links to & removes each associated Mission, and hides already associated Missions from the selection list
+- :rocket: Move the Imports entry out of the main menu & into a card at the top of the Files menu - saved menu orders have the `imports` entry removed
+
+### v13.102.0 - 2026-10-02
+
+> [!WARNING]
+> This release migrates from Minio to Garage as the object store. If you are using Docker Compose, you must run `./cloudtak.sh migrate-store`
+> to copy existing files out of the MinIO volume before updating to this release.
+>
+> BEFORE RUNNING THE MIGRATION ENSURE YOU BACKUP YOUR MINIO VOLUMN!
+>
+> If you are using CloudFormation, the migration is not relevant as CloudTAK uses S3 natively.
+
+- :rocket: Docker Compose deployments now use [Garage](https://garagehq.deuxfleurs.fr/) as the object store instead of MinIO, whose community images & binaries are no longer published - `./cloudtak.sh migrate-store` (run automatically by `./cloudtak.sh update`) copies existing files out of the MinIO volume, `AWS_S3_Endpoint` moves to `http://store:3900` & a `GARAGE_RPC_SECRET` is added to `.env`
+- :bug: S3 clients only calculate & validate request/response checksums when required so multipart objects served by non-AWS S3 endpoints download correctly
 - :bug: Fix HTML vs Markdown Detection Parser
 - :tada: Add a `type` Field Mapping widget (`@widget: 'type'` on `common/core-schema.ts` properties) using the MIL-STD-2525E symbol picker from the CoT sidebar to select a fixed Type, or a template
 - :rocket: Move the Event specific `started`, `ended`, `priority` & `location` columns of `core_entity` into a `core_entity_event` side table sharing its primary key - payloads are unchanged, `GET /api/core/event` no longer accepts those columns as `sort`
