@@ -23,6 +23,20 @@
 
 ### Pending Release
 
+### v13.103.5 - 2026-10-06
+
+- :rocket: Allow navigating to non-cot Point Features from imported overlays
+- :rocket: Require explicit confirmation when updating a single Layer's Task version, only Admin "Update All" skips the prompt
+
+### v13.103.4 - 2026-10-05
+
+- :rocket: Allow permanently dismissing Initial Permissions Modal on Desktop clients
+
+### v13.103.3 - 2026-10-05
+
+- :bug: Ensure all localStorage properties are wiped on logout
+- :bug: `PUT/POST /api/profile/location` reported the user's Default Point Type (a 2525 SIDC) as the self CoT type, rendering CloudTAK users in ATAK as a MIL-STD friendly unit square instead of a team skittle - the self type is now always `a-f-G-E-V-C` as the web client sends
+
 ### v13.103.2 - 2026-10-05
 
 - :rocket: TAK Server API clients are now built through a shared `TAKServerControl` (`asUser`, `asServer`, `asConnection`) and the CloudTAK client UID through `profileUid`, replacing ~90 inline `TAKAPI.init` calls and 11 inline UID strings
