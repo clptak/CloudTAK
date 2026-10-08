@@ -178,10 +178,39 @@ export const CoreEntityBoardSummary = Type.Object({
     columns: Type.Array(CoreEntityBoardColumnSummary, { description: 'Columns of the Board' }),
 });
 
+/** A single ID of a record in an external system - merged into the record's external_ids */
+export const CoreEntityExternalId = Type.Object({
+    system: Type.String({
+        minLength: 1,
+        pattern: '^[A-Za-z0-9][A-Za-z0-9_.-]*$',
+        description: 'External system the ID belongs to - ie: active911, caltopo, cad',
+    }),
+    value: Type.String({
+        description: 'ID of the record in the external system - an empty value removes the system from the record',
+    }),
+});
+
+export const CoreEntityExternalIds = Type.Record(Type.String(), Type.String(), {
+    description: 'IDs of the record in external systems keyed by system - ie: { "active911": "1234", "caltopo": "B42325" }',
+});
+
+/** Request form of an external ID - a bare string is the ID under the default system, deprecated and removed in v14 */
+export const CoreEntityExternalIdInput = Type.Union([
+    CoreEntityExternalId,
+    Type.String({ description: 'Deprecated - ID of the record under the default system, send { system, value } instead' }),
+]);
+
+/** Deprecated response field - the ID under the default system */
+export const CoreEntityExternalIdLegacy = Type.String({
+    description: 'Deprecated - ID of the record under the default system, use external_ids - removed in v14',
+});
+
 export const CoreEntityResponse = Type.Composite([
-    Type.Required(Type.Omit(withoutHints(CoreEntitySchema), ['ended'])),
+    Type.Required(Type.Omit(withoutHints(CoreEntitySchema), ['ended', 'external_id'])),
     Type.Object({
         id: Type.String(),
+        external_id: CoreEntityExternalIdLegacy,
+        external_ids: CoreEntityExternalIds,
         missions: Type.Array(CoreEntityMission, { description: 'TAK Server Missions associated with the Event' }),
         created: Type.String(),
         updated: Type.String(),
@@ -268,16 +297,21 @@ export const CoreFormColumnResponse = Type.Object({
 });
 
 export const CoreDeviceResponse = Type.Composite([
-    Type.Required(Type.Omit(withoutHints(CoreDeviceSchema), ['battery', 'event_external_id'])),
+    Type.Required(Type.Omit(withoutHints(CoreDeviceSchema), ['battery', 'external_id'])),
     Type.Object({
         id: Type.String(),
+        external_id: CoreEntityExternalIdLegacy,
+        external_ids: CoreEntityExternalIds,
         created: Type.String(),
         updated: Type.String(),
         username: Type.Union([Type.Null(), Type.String()]),
         connection: Type.Union([Type.Null(), Type.Integer()], { description: 'Connection that created the Device if created by a Connection or Layer token' }),
-        event: Type.Union([Type.Null(), Type.String()], { description: 'Core Event the Device is currently assigned to' }),
+        editable: Type.Boolean({ description: 'Can users other than the creator edit the Device' }),
         battery: Type.Union([Type.Null(), withoutHints(CoreDeviceSchema).properties.battery]),
         metadata: Type.Record(Type.String(), Type.Unknown(), { description: 'User defined key/value Device metadata' }),
+        links: Type.Array(CoreEntityLink, { description: 'Named URLs associated with the Device' }),
+        style: Type.Object(CoreEntityStyle.properties, { description: 'Point styling for the Device' }),
+        geometry: Type.Union([Type.Null(), GeoJSONFeatureGeometryPoint], { description: 'Last known location of the Device' }),
     }),
 ]);
 

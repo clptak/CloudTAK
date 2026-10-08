@@ -1,13 +1,14 @@
 import { Type } from '@sinclair/typebox';
-import { StandardResponse, CoreEntityResponse, CoreEntityLink, CoreEntityStyle, CoreEntityMission, GeoJSONFeatureGeometryPoint } from '../../common/types.js';
-import { sql, eq } from 'drizzle-orm';
+import { StandardResponse, CoreEntityResponse, CoreEntityLink, CoreEntityStyle, CoreEntityMission, CoreEntityExternalIdInput, GeoJSONFeatureGeometryPoint } from '../../common/types.js';
+import { sql, getTableColumns } from 'drizzle-orm';
 import Schema from '@openaddresses/batch-schema';
 import Err from '@openaddresses/batch-error';
 import Auth, { AuthUser, AuthResource, AuthResourceAccess } from '../../common/auth.js';
-import { CoreEntity, CoreEntityEvent, CoreEntityChannel } from '../../common/schema.js';
-import { CoreEntity_Priority } from '../../common/enums.js';
+import { CoreEntity, CoreEntityEvent } from '../../common/schema.js';
+import { sharedWith, setChannels, setExternalId, toExternalId } from '../../common/models/CoreEntity.js';
+import { CoreEntity_Priority, LayerMapping_Destination } from '../../common/enums.js';
 import type ConfigStateless from '../config.js';
-import { userChannels } from '../lib/tak-channels.js';
+import { userChannels } from '../../common/control/tak-channels.js';
 import { notifyCoreEntity } from '../lib/core-entity.js';
 import EventControl from '../lib/control/event.js';
 import { placementResponse } from '../lib/control/board.js';
@@ -32,7 +33,7 @@ export default async function router(schema: Schema, config: ConfigStateless) {
             order: Default.Order,
             sort: Type.String({
                 default: 'created',
-                enum: Object.keys(CoreEntity).filter(key => key !== 'kind'),
+                enum: Object.keys(getTableColumns(CoreEntity)).filter(key => key !== 'kind'),
             }),
             filter: Default.Filter,
             channel: Type.Optional(Type.Union([
@@ -60,14 +61,7 @@ export default async function router(schema: Schema, config: ConfigStateless) {
                 ? []
                 : Array.isArray(req.query.channel) ? req.query.channel : [req.query.channel];
 
-            const channel = filterChannels.length === 0
-                ? sql`True`
-                : sql`EXISTS (
-                    SELECT 1
-                    FROM core_entity_channel
-                    WHERE core_entity_channel.entity = core_entity.id
-                    AND core_entity_channel.channel IN ${filterChannels}
-                )`;
+            const channel = filterChannels.length === 0 ? sql`True` : sharedWith(filterChannels);
 
             let where;
             if (auth instanceof AuthResource) {
@@ -87,25 +81,11 @@ export default async function router(schema: Schema, config: ConfigStateless) {
                 const user = auth;
                 const channels = [...await userChannels(config, user.email)];
 
-                where = channels.length
-                    ? sql`
-                        name ~* ${req.query.filter}
-                        AND (
-                            username = ${user.email}
-                            OR EXISTS (
-                                SELECT 1
-                                FROM core_entity_channel
-                                WHERE core_entity_channel.entity = core_entity.id
-                                AND core_entity_channel.channel IN ${channels}
-                            )
-                        )
-                        AND ${channel}
-                    `
-                    : sql`
-                        name ~* ${req.query.filter}
-                        AND username = ${user.email}
-                        AND ${channel}
-                    `;
+                where = sql`
+                    name ~* ${req.query.filter}
+                    AND (username = ${user.email} OR ${sharedWith(channels)})
+                    AND ${channel}
+                `;
             }
 
             const list = await config.models.CoreEntity.augmented_list({
@@ -184,10 +164,7 @@ export default async function router(schema: Schema, config: ConfigStateless) {
                 format: 'date-time',
                 description: 'Time at which the Event ends - a future time keeps the Event active until then, omit for an open ended Event',
             })])),
-            external_id: Type.String({
-                default: '',
-                description: 'ID of the Event in an external system',
-            }),
+            external_id: Type.Optional(CoreEntityExternalIdInput),
             editable: Type.Boolean({
                 default: true,
                 description: 'Can users other than the creator edit the Event',
@@ -225,7 +202,7 @@ export default async function router(schema: Schema, config: ConfigStateless) {
                 ],
             });
 
-            const { channels, ...body } = req.body;
+            const { channels, external_id, ...body } = req.body;
 
             const connection = auth instanceof AuthResource ? await resourceConnection(auth) : null;
 
@@ -236,13 +213,9 @@ export default async function router(schema: Schema, config: ConfigStateless) {
                     connection,
                 }, tx);
 
-                if (channels.length > 0) {
-                    await tx.insert(CoreEntityChannel)
-                        .values(channels.map(ch => ({
-                            entity: id,
-                            channel: BigInt(ch),
-                        })));
-                }
+                await setChannels(tx, id, channels);
+
+                if (external_id !== undefined) await setExternalId(tx, { id, kind: LayerMapping_Destination.COREENTITY, connection }, toExternalId(external_id));
 
                 return id;
             }).catch(uniqueViolation('external_id is already used by another Event of the Connection'));
@@ -287,7 +260,7 @@ export default async function router(schema: Schema, config: ConfigStateless) {
                 format: 'date-time',
                 description: 'Time at which the Event ends - push a future time out to keep the Event active, null leaves it open ended',
             })])),
-            external_id: Type.Optional(Type.String()),
+            external_id: Type.Optional(CoreEntityExternalIdInput),
             editable: Type.Optional(Type.Boolean()),
             metadata: Type.Optional(Type.Record(Type.String(), Type.Unknown(), {
                 description: 'User defined key/value Event metadata - replaces the existing metadata object',
@@ -321,7 +294,9 @@ export default async function router(schema: Schema, config: ConfigStateless) {
 
             await ensureEventAccess(auth, event, connection);
 
-            const { channels, ...body } = req.body;
+            const { channels, external_id, ...body } = req.body;
+
+            const changed = Object.keys(body).length > 0 || external_id !== undefined;
 
             const creator = isEventCreator(auth, event, connection);
 
@@ -333,11 +308,11 @@ export default async function router(schema: Schema, config: ConfigStateless) {
                 throw new Err(403, null, 'Only the Event creator can modify the editable flag');
             }
 
-            if (Object.keys(body).length > 0 && !event.editable && !creator) {
+            if (changed && !event.editable && !creator) {
                 throw new Err(403, null, 'The Event creator has disabled editing of this Event');
             }
 
-            if (Object.keys(body).length > 0) {
+            if (changed) {
                 const { active, ...columns } = body;
 
                 // An explicit ended in the body wins - ending an Event never
@@ -351,28 +326,21 @@ export default async function router(schema: Schema, config: ConfigStateless) {
                     }
                 }
 
-                await config.models.CoreEntity.commitEvent(req.params.event, {
-                    ...columns,
-                    ...(ended === undefined ? {} : { ended }),
+                await config.pg.transaction(async (tx) => {
+                    await config.models.CoreEntity.commitEvent(req.params.event, {
+                        ...columns,
+                        ...(ended === undefined ? {} : { ended }),
+                    }, tx);
+
+                    if (external_id !== undefined) await setExternalId(tx, { id: event.id, kind: LayerMapping_Destination.COREENTITY, connection: event.connection }, toExternalId(external_id));
                 }).catch(uniqueViolation('external_id is already used by another Event of the Connection'));
             }
 
-            if (channels !== undefined) {
-                await config.pg.delete(CoreEntityChannel)
-                    .where(eq(CoreEntityChannel.entity, req.params.event));
-
-                if (channels.length > 0) {
-                    await config.pg.insert(CoreEntityChannel)
-                        .values(channels.map(ch => ({
-                            entity: req.params.event,
-                            channel: BigInt(ch),
-                        })));
-                }
-            }
+            if (channels !== undefined) await setChannels(config.pg, req.params.event, channels);
 
             const updated = await config.models.CoreEntity.augmented_from(req.params.event);
 
-            if (Object.keys(body).length > 0 || channels !== undefined) {
+            if (changed || channels !== undefined) {
                 notifyCoreEntity(config, ETLEventAction.Update, updated);
             }
 

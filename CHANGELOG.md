@@ -14,14 +14,43 @@
 
 - `GET /api/search/reverse/:long/:lat` endpoint is deprecated and will be removed in v14, use `GET /api/search/reverse/:long/:lat/<type>` instead
 - `Layer.template` is deprecated and will be removed
+- The `external_id` string on CoreEvent & CoreDevice requests & responses is deprecated and will be removed in v14, use `external_id: { system, value }` on requests and `external_ids` on responses
 - ETLs in v14 will be required to declare Named Schemas, single schema support will be removed
 - The Minio Legacy Store will be removed in V14 - Ensure you have migrated to Garage before updating to v14.
+- CoreEntity single external ID support will be removed in v14 - ensure you have migrated to multi-system external IDs before updating to v14.
 
 ### Beta Notice
 
 - CoreEvents & CoreDevices are in beta and functionality may change in minor releases. Use with caution in production environments.
 
 ### Pending Release
+
+### v13.107.0 - 2026-10-07
+
+- :rocket: Introduce Quick Pic Support in the Draw Menu
+
+### v13.106.0 - 2026-10-07
+
+- :tada: CoreEvents & CoreDevices now carry multiple external IDs keyed by system (ie: `{ "active911": "1234", "caltopo": "B42325" }`) in a new `core_entity_external` table, returned as `external_ids`
+- :rocket: `POST` & `PATCH /api/core/event` & `/api/core/device` take a single `external_id: { system, value }` which is merged into the record's external IDs - an empty value removes the system - a bare string is still accepted as the `default` system and echoed on the deprecated `external_id` response field
+- :rocket: The CoreEvent & CoreDevice Layer Mappings map the External ID as a `system` & `value` pair - the value defaults to the Feature ID and the system to `default`, which is where existing external IDs are migrated to - Mappings saved with the bare string form are migrated & still accepted
+- :rocket: Layer submissions UPSERT on the external ID within the Connection, kind & system, serialised by an advisory lock
+- :white_check_mark: Add API & Mapping tests for multi-system external IDs
+
+### v13.105.1 - 2026-10-07
+
+- :rocket: Use internally cached active group list for faster API responses as we can avoid a TAK Server Request
+
+### v13.105.0 - 2026-10-06
+
+- :tada: Introduce GeoParquet output for imported vector layers to power future offline search
+
+### v13.104.0 - 2026-10-06
+
+- :tada: Add `Layer.vpc` - System Admins can attach a Layer's Lambda to the private VPC subnets so it egresses from the static NAT addresses and can reach internal resources; the addresses to allowlist are shown under Layer > Deployment > Infrastructure
+- :tada: Add `cloudformation/sms.template.js` provisioning AWS End User Messaging SMS resources (opt-out list, protect configuration, configuration set with CloudWatch event logging, phone number, pool, optional two-way SNS topic and send policy) for outbound SMS from CloudTAK in commercial and GovCloud partitions
+- :rocket: **Breaking** Core Devices are now `core_entity` rows of kind `CoreDevice` with a `core_entity_device` side table, matching Core Events - the `core_device` & `core_device_channel` tables are dropped, Device payloads gain `editable`, `links`, `style` & a nullable `geometry` and lose `event`, the `event` query of `GET /api/core/device` & `event_external_id` of the CoreDevice ETL schema are removed - a Device's Event assignment is expressed through Effects, existing assignments are migrated to an active `assigned` Effect
+- :rocket: **Internal** Replace `GET /api/config/webhooks` & `GET /api/config/email` with a single `GET /api/config/layer` returning webhook, email & VPC settings
 
 ### v13.103.5 - 2026-10-06
 
