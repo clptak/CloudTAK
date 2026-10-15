@@ -19,6 +19,7 @@ flight.connection();
 
 const layerToken = 'etl.' + jwt.sign({ access: 'layer', id: 1, internal: true }, 'coe-wildland-fire');
 const otherLayerToken = 'etl.' + jwt.sign({ access: 'layer', id: 2, internal: true }, 'coe-wildland-fire');
+const apiLayerToken = 'etl.' + jwt.sign({ access: 'layer', id: 3, internal: true }, 'coe-wildland-fire');
 
 const externalIds = sql<Record<string, string>>`${EXTERNAL_IDS}`;
 
@@ -64,6 +65,16 @@ test('Setup: Create Layers', async () => {
             version: '1.0.0',
             connection: 2,
         });
+
+        // A 1.1 Task that talks to first-class APIs rather than submitting Features
+        await flight.config!.models.Layer.generate({
+            name: 'API Layer',
+            task: 1,
+            version: '1.1.0',
+            connection: 1,
+            schema: '1.1',
+            permissions: ['video:*'],
+        });
     } catch (err) {
         assert.ifError(err);
     }
@@ -94,6 +105,44 @@ test('POST: api/connection/1/submit - layer token from another connection', asyn
 
         assert.equal(res.status, 401);
         assert.equal(res.body.message, 'Layer does not belong to this Connection');
+    } catch (err) {
+        assert.ifError(err);
+    }
+});
+
+test('POST: api/connection/1/submit - a 1.1 Layer token needs feature:submit', async () => {
+    try {
+        const body = { type: 'FeatureCollection', schema: 'unit', features: [] };
+
+        const denied = await flight.fetch('/api/connection/1/submit', {
+            method: 'POST',
+            auth: { bearer: apiLayerToken },
+            body,
+        }, false);
+
+        assert.equal(denied.status, 403);
+        assert.equal(denied.body.message, 'Layer token does not have the feature:submit permission');
+
+        await flight.config!.models.Layer.commit(3, { permissions: ['feature:submit', 'video:*'] });
+
+        const granted = await flight.fetch('/api/connection/1/submit', {
+            method: 'POST',
+            auth: { bearer: apiLayerToken },
+            body,
+        }, true);
+
+        assert.equal(granted.status, 200);
+
+        // 1.0 Layers are never held to feature:submit
+        await flight.config!.models.Layer.commit(3, { schema: '1.0', permissions: [] });
+
+        const legacy = await flight.fetch('/api/connection/1/submit', {
+            method: 'POST',
+            auth: { bearer: apiLayerToken },
+            body,
+        }, true);
+
+        assert.equal(legacy.status, 200);
     } catch (err) {
         assert.ifError(err);
     }
@@ -427,7 +476,7 @@ test('POST: api/connection/1/submit - CoreEntity & CoreDevice maps create record
         await models.LayerMapping.generate({
             layer: 1,
             schema: 'incident',
-            destination: LayerMapping_Destination.COREENTITY,
+            destination: LayerMapping_Destination.COREEVENT,
             name: 'Severe',
             query: 'properties.metadata.severity > 3',
             mapping: {
@@ -443,7 +492,7 @@ test('POST: api/connection/1/submit - CoreEntity & CoreDevice maps create record
         await models.LayerMapping.generate({
             layer: 1,
             schema: 'incident',
-            destination: LayerMapping_Destination.COREENTITY,
+            destination: LayerMapping_Destination.COREEVENT,
             name: 'Incident Defaults',
             query: 'properties.metadata.title != null',
             mapping: {
@@ -643,7 +692,7 @@ test('POST: api/connection/1/submit - channels, style, links & active', async ()
         await models.LayerMapping.generate({
             layer: 1,
             schema: 'dispatch',
-            destination: LayerMapping_Destination.COREENTITY,
+            destination: LayerMapping_Destination.COREEVENT,
             name: 'Calls',
             query: 'properties.metadata.kind = "call"',
             mapping: {
@@ -741,7 +790,7 @@ test('POST: api/connection/1/submit - ended as seconds from submission is pushed
         await models.LayerMapping.generate({
             layer: 1,
             schema: 'cad',
-            destination: LayerMapping_Destination.COREENTITY,
+            destination: LayerMapping_Destination.COREEVENT,
             name: 'CAD',
             query: null,
             mapping: {
@@ -806,7 +855,7 @@ test('POST: api/connection/1/submit - update: false fields are only applied when
         await models.LayerMapping.generate({
             layer: 1,
             schema: 'hydrant',
-            destination: LayerMapping_Destination.COREENTITY,
+            destination: LayerMapping_Destination.COREEVENT,
             name: 'Hydrants',
             query: null,
             mapping: {
@@ -897,7 +946,7 @@ test('POST: api/connection/1/submit - records inherit the Channels of the Connec
         await models.LayerMapping.generate({
             layer: 1,
             schema: 'inherit',
-            destination: LayerMapping_Destination.COREENTITY,
+            destination: LayerMapping_Destination.COREEVENT,
             name: 'No Channels',
             query: null,
             mapping: { name: '{{title}}', type: '10031000001211000000' },
@@ -972,7 +1021,7 @@ test('POST: api/connection/1/submit - a CoreEntity map that cannot produce a typ
         await models.LayerMapping.generate({
             layer: 1,
             schema: 'alert',
-            destination: LayerMapping_Destination.COREENTITY,
+            destination: LayerMapping_Destination.COREEVENT,
             name: 'No Type',
             query: null,
             mapping: { remarks: '{{text}}' },

@@ -25,6 +25,22 @@
 
 ### Pending Release
 
+### v13.1010.0 - 2026-10-14
+
+- :tada: Permissions modal now shows a location disclosure with explicit consent before the system location prompt (or settings hand-off) on every platform; the location row describes background use on native, and the footer is `Skip for now` / `Refresh` / `Done` with `Done` enabled once required permissions are satisfied
+- :tada: The Admin Connection now broadcasts located Core Devices as CoT alongside Core Events - one stream over `core_entity` joins both side tables, and Device create/update/submit trigger an immediate broadcast like Events do (`hub.coreEntitySubmit`); Device specific CoT details are future work
+- :rocket: Rename Event-specific `core-entity` files & `CoreEntity*` identifiers to `core-event` / `CoreEvent*` (routes, lib, tests, Board/Assignment/Effect/Response tables & models, enums, TypeBox types, `hub.coreEventSubmit`) - the name predated the CoreEntity inheritance model; DB table names & API paths are unchanged
+- :tada: `DELETE /api/core/event/:event` & `DELETE /api/core/device/:device` accept Layer & Connection tokens holding the `event:delete` / `device:delete` permission - a token can only delete records of its own Connection
+
+### v13.109.2 - 2026-10-14
+
+- :rocket: change AGOL text to be `API Key` instead of Legacy Key as the new API Keys are submitted the same way just with a max 1 year lifespan
+
+### v13.109.1 - 2026-10-12
+
+- :bug: Allow Schema UI to represent & edit Array<primitive>
+- :tada: Add `attachment:create` & `attachment:read` scopes so Layer & Connection tokens can upload, list & download Attachments
+
 ### v13.109.0 - 2026-10-12
 
 - :rocket: Visual Redesign of CoT Sidebar
