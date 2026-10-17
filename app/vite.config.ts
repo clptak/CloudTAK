@@ -97,6 +97,9 @@ const symlinkedPluginAlias = {
     },
 };
 
+// Video.js 10 custom elements used in templates - keep in sync with VideoPlayer.vue
+const videoJsElements = new Set(['live-video-player', 'live-video-skin']);
+
 /**
  * Vite compiles `?worker&url` bundles (Atlas + MapLibre workers) and their
  * chunks in a separate build it never records in `manifest.json`, so the
@@ -161,7 +164,13 @@ export default defineConfig(() => {
         },
         plugins: [
             symlinkPluginResolve,
-            vue(),
+            vue({
+                template: {
+                    compilerOptions: {
+                        isCustomElement: (tag) => videoJsElements.has(tag),
+                    },
+                },
+            }),
             precacheWorkerAssetsPlugin(),
             {
                 name: 'configure-server',
