@@ -8,7 +8,7 @@ const REQUEST_TIMEOUT_MS = 15_000;
 const ALLOWED_METHODS = new Set(['GET', 'POST', 'PATCH', 'DELETE']);
 
 /** Paths under /api/locate allowed through the bridge (locator plugin surface). */
-const ALLOWED_SUBPATH = /^\/locators(?:\/[^/]+(?:\/(?:archive|reactivate|manual-ping|history|send-link-sms))?)?$/;
+const ALLOWED_SUBPATH = /^\/(?:meta|missions|locators(?:\/[^/]+(?:\/(?:archive|reactivate|manual-ping|history|send-link-sms))?)?)$/;
 
 export function getTakPortalPublicOrigin(): string | null {
     const raw = String(process.env.TAK_PORTAL_PUBLIC_URL || '').trim();

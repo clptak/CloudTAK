@@ -37,6 +37,33 @@ export default async function router(schema: Schema, config: ConfigStateless) {
         description: 'Proxy locate API calls to internal TAK Portal using the CloudTAK user identity (no cross-origin browser auth).',
     };
 
+    await schema.get('/takportal/locate/meta', {
+        name: 'Locator form meta',
+        ...common,
+        res: Type.Any(),
+    }, async (req, res) => {
+        try {
+            await bridgeLocate(config, req as AuthRequest, res, '/meta');
+        } catch (err) {
+            Err.respond(err, res);
+        }
+    });
+
+    await schema.get('/takportal/locate/missions', {
+        name: 'Locator missions for a channel',
+        ...common,
+        query: Type.Object({
+            channel: Type.Optional(Type.String()),
+        }),
+        res: Type.Any(),
+    }, async (req, res) => {
+        try {
+            await bridgeLocate(config, req as AuthRequest, res, '/missions');
+        } catch (err) {
+            Err.respond(err, res);
+        }
+    });
+
     await schema.get('/takportal/locate/locators', {
         name: 'List locators',
         ...common,
