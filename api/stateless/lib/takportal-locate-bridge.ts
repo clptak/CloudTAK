@@ -8,7 +8,7 @@ const REQUEST_TIMEOUT_MS = 15_000;
 const ALLOWED_METHODS = new Set(['GET', 'POST', 'PATCH', 'DELETE']);
 
 /** Paths under /api/locate allowed through the bridge (locator plugin surface). */
-const ALLOWED_SUBPATH = /^\/(?:meta|missions|locators(?:\/[^/]+(?:\/(?:archive|reactivate|manual-ping|history|send-link-sms))?)?)$/;
+const ALLOWED_SUBPATH = /^\/(?:meta|missions|locators(?:\/[^/]+(?:\/(?:archive|reactivate|manual-ping|history|send-link-sms|report\.pdf))?)?)$/;
 
 export function getTakPortalPublicOrigin(): string | null {
     const raw = String(process.env.TAK_PORTAL_PUBLIC_URL || '').trim();
@@ -83,7 +83,7 @@ export async function forwardTakPortalLocateRequest(input: {
     body?: unknown;
     contentType?: string;
     profile: InferSelectModel<typeof Profile>;
-}): Promise<{ status: number; contentType: string | null; body: string }> {
+}): Promise<{ status: number; contentType: string | null; contentDisposition: string | null; body: string | Buffer }> {
     const method = String(input.method || 'GET').toUpperCase();
     if (!ALLOWED_METHODS.has(method)) {
         throw new Err(405, null, 'Method not allowed');
@@ -122,9 +122,12 @@ export async function forwardTakPortalLocateRequest(input: {
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
 
+    const contentType = response.headers.get('content-type');
+    const binary = !!contentType && /application\/(?:pdf|octet-stream)/i.test(contentType);
     return {
         status: response.status,
-        contentType: response.headers.get('content-type'),
-        body: await response.text(),
+        contentType,
+        contentDisposition: response.headers.get('content-disposition'),
+        body: binary ? Buffer.from(await response.arrayBuffer()) : await response.text(),
     };
 }

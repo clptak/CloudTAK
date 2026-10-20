@@ -28,6 +28,9 @@ async function bridgeLocate(
     if (result.contentType) {
         res.setHeader('content-type', result.contentType);
     }
+    if (result.contentDisposition) {
+        res.setHeader('content-disposition', result.contentDisposition);
+    }
     res.send(result.body);
 }
 
@@ -150,6 +153,19 @@ export default async function router(schema: Schema, config: ConfigStateless) {
     }, async (req, res) => {
         try {
             await bridgeLocate(config, req as AuthRequest, res, `/locators/${encodeURIComponent(req.params.id)}/manual-ping`);
+        } catch (err) {
+            Err.respond(err, res);
+        }
+    });
+
+    await schema.get('/takportal/locate/locators/:id/report.pdf', {
+        name: 'Locator PDF report',
+        ...common,
+        params: Type.Object({ id: Type.String() }),
+        res: Type.Any(),
+    }, async (req, res) => {
+        try {
+            await bridgeLocate(config, req as AuthRequest, res, `/locators/${encodeURIComponent(req.params.id)}/report.pdf`);
         } catch (err) {
             Err.respond(err, res);
         }
