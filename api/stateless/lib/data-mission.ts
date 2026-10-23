@@ -50,6 +50,27 @@ export default class DataMission {
                 });
                 return;
             }
+
+            // A Mission the Data Sync attached rather than created has no subscription for the
+            // Connection, and TAK Server drops the streamed CoTs of an unsubscribed client
+            // instead of adding them to the Mission. Errors are handled here, as the catch below
+            // would take them for a missing Mission and create a second one
+            if (connection.enabled) {
+                try {
+                    const uid = ConnectionControl.uid(connection.auth.cert);
+                    const subscriptions = await api.Mission.subscriptions(data.mission_guid || data.name, {
+                        token: data.mission_token || undefined,
+                    }) as { data?: unknown };
+
+                    if (!Array.isArray(subscriptions.data) || !subscriptions.data.includes(uid)) {
+                        await api.Mission.subscribe(data.mission_guid || data.name, { uid }, {
+                            token: data.mission_token || undefined,
+                        });
+                    }
+                } catch (err) {
+                    console.error(`DataMission: failed to subscribe Connection ${connection.id} to Mission ${data.mission_guid || data.name}:`, err);
+                }
+            }
         } catch (err) {
             console.error(err);
             if (!data.mission_sync) {
