@@ -30,56 +30,11 @@
             </div>
         </template>
 
-        <template #buttons>
+        <template
+            v-if='embedded'
+            #buttons
+        >
             <TablerIconButton
-                v-if='event && hasMap'
-                title='Zoom To'
-                @click='flyTo'
-            >
-                <IconZoomPan
-                    :size='28'
-                    stroke='1'
-                />
-            </TablerIconButton>
-
-            <TablerIconButton
-                v-if='event && is_editable && hasMap'
-                title='Move Marker'
-                @click='editGeometry'
-            >
-                <IconPencil
-                    :size='28'
-                    stroke='1'
-                />
-            </TablerIconButton>
-
-            <!-- Only the creator can change who is allowed to edit -->
-            <TablerIconButton
-                v-if='event && is_creator'
-                :title='event.editable ? "Disable Editing by Others" : "Allow Editing by Others"'
-                @click='patch({ editable: !event.editable })'
-            >
-                <IconLockOpen
-                    v-if='event.editable'
-                    :size='28'
-                    stroke='1'
-                />
-                <IconLock
-                    v-else
-                    :size='28'
-                    stroke='1'
-                />
-            </TablerIconButton>
-
-            <TablerDelete
-                v-if='event && is_creator'
-                displaytype='icon'
-                :size='28'
-                @delete='deleteEvent'
-            />
-
-            <TablerIconButton
-                v-if='embedded'
                 title='Close'
                 @click='emit("close")'
             >
@@ -105,12 +60,73 @@
             class='d-flex flex-column h-100'
             style='min-height: 0;'
         >
-            <PropertyCoreEntityStatus
-                :active='event.active'
-                :priority='event.priority'
-                :edit='is_editable'
-                @update:active='patch({ active: $event })'
-            />
+            <div class='entity-actions d-flex align-items-center flex-nowrap px-2 py-1 border-bottom cloudtak-header flex-shrink-0'>
+                <TablerIconButton
+                    v-if='hasMap'
+                    title='Zoom To'
+                    @click='flyTo'
+                >
+                    <IconZoomPan
+                        :size='actionIconSize'
+                        stroke='1'
+                    />
+                </TablerIconButton>
+
+                <TablerIconButton
+                    v-if='is_editable && hasMap'
+                    title='Move Marker'
+                    @click='editGeometry'
+                >
+                    <IconPencil
+                        :size='actionIconSize'
+                        stroke='1'
+                    />
+                </TablerIconButton>
+
+                <TablerIconButton
+                    v-if='is_editable'
+                    :title='event.active ? "End" : "Reactivate"'
+                    @click='patch({ active: !event.active })'
+                >
+                    <IconPlayerStop
+                        v-if='event.active'
+                        :size='actionIconSize'
+                        stroke='1'
+                    />
+                    <IconPlayerPlay
+                        v-else
+                        :size='actionIconSize'
+                        stroke='1'
+                    />
+                </TablerIconButton>
+
+                <div class='ms-auto d-flex align-items-center flex-nowrap'>
+                    <!-- Only the creator can change who is allowed to edit -->
+                    <TablerIconButton
+                        v-if='is_creator'
+                        :title='event.editable ? "Disable Editing by Others" : "Allow Editing by Others"'
+                        @click='patch({ editable: !event.editable })'
+                    >
+                        <IconLockOpen
+                            v-if='event.editable'
+                            :size='actionIconSize'
+                            stroke='1'
+                        />
+                        <IconLock
+                            v-else
+                            :size='actionIconSize'
+                            stroke='1'
+                        />
+                    </TablerIconButton>
+
+                    <TablerDelete
+                        v-if='is_creator'
+                        displaytype='icon'
+                        :size='actionIconSize'
+                        @delete='deleteEvent'
+                    />
+                </div>
+            </div>
 
             <div
                 v-if='saveError'
@@ -302,8 +318,9 @@ import {
     IconPencil,
     IconZoomPan,
     IconCircleX,
+    IconPlayerStop,
+    IconPlayerPlay,
 } from '@tabler/icons-vue';
-import Type2525 from '@tak-ps/node-cot/2525';
 import MenuTemplate from './util/MenuTemplate.vue';
 import FeatureIcon from './util/FeatureIcon.vue';
 import CopyField from './util/CopyField.vue';
@@ -313,7 +330,6 @@ import PropertyTabs, { type PropertyTab } from './util/PropertyTabs.vue';
 import PropertyType from './Property/PropertyType.vue';
 import PropertyStyle from './Property/PropertyStyle.vue';
 import PropertyRemarks from './Property/PropertyRemarks.vue';
-import PropertyCoreEntityStatus from './Property/PropertyCoreEntityStatus.vue';
 import PropertyCoreEntityPriority from './Property/PropertyCoreEntityPriority.vue';
 import PropertyCoreEntityDuration from './Property/PropertyCoreEntityDuration.vue';
 import PropertyCoreEntityExternalId from './Property/PropertyCoreEntityExternalId.vue';
@@ -330,7 +346,8 @@ import { server } from '../../std.ts';
 import { db, liveQuery } from '../../database.ts';
 import { missingRequiredForms } from '../../utils/column-forms.ts';
 import { useMapStore } from '../../stores/map.ts';
-import ProfileConfig from '../../base/profile.ts';
+import { useEntityAccess } from '../../utils/entity-access.ts';
+import { entityMarkerProperties } from '../../utils/core-entity.ts';
 
 // When an eventId prop is provided the view runs embedded (the Event Board
 // modal) - the Event comes from the prop instead of the route and map
@@ -350,6 +367,7 @@ const mapStore = useMapStore();
 const embedded = computed(() => props.eventId !== undefined);
 const eventKey = computed(() => props.eventId ?? String(route.params.event || ''));
 const hasMap = computed(() => !!mapStore._map);
+const actionIconSize = 28;
 
 const event = ref<CoreEntity | undefined>();
 const loading = ref(true);
@@ -382,20 +400,7 @@ const tabs: Array<PropertyTab> = [
     { value: 'forms', label: 'Forms' },
 ];
 
-const profile = ref<{ username?: string, system_admin?: boolean }>({});
-
-const is_creator = computed(() => {
-    if (!event.value) return false;
-    return !!profile.value.system_admin
-        || (!!event.value.username && event.value.username === profile.value.username);
-});
-
-// The Event creator can always edit - everyone else only while the creator
-// leaves the editable flag set
-const is_editable = computed(() => {
-    if (!event.value) return false;
-    return is_creator.value || event.value.editable;
-});
+const { is_creator, is_editable, load: loadAccess } = useEntityAccess(event);
 
 // The header icon isn't a CoT - FeatureIcon derives the MIL-STD symbol from the
 // type the same way it does for one
@@ -420,31 +425,7 @@ const styleProperties = computed(() => {
 });
 
 onMounted(async () => {
-    const [username, systemAdmin] = await Promise.all([
-        ProfileConfig.get('username'),
-        ProfileConfig.get('system_admin'),
-    ]);
-
-    profile.value = {
-        username: username?.value as string | undefined,
-        system_admin: systemAdmin?.value as boolean | undefined,
-    };
-
-    // Standalone pages (Event Board) have no locally synced Profile - fall
-    // back to the API so creator/editable checks still work there
-    if (!profile.value.username) {
-        try {
-            const fetched = await ProfileConfig.fetch();
-
-            profile.value = {
-                username: fetched.username,
-                system_admin: fetched.system_admin,
-            };
-        } catch (err) {
-            console.error('Failed to fetch Profile', err);
-        }
-    }
-
+    await loadAccess();
     await fetchEvent();
     watchCot();
 });
@@ -630,10 +611,6 @@ async function completeFormWizard(): Promise<void> {
     }
 }
 
-/**
- * Mirror a saved change onto the Event's map marker so it updates
- * immediately rather than on the next Event CoT broadcast
- */
 async function syncMapFeature(): Promise<void> {
     if (!event.value || !mapStore._worker) return;
 
@@ -641,39 +618,7 @@ async function syncMapFeature(): Promise<void> {
         const cot = await mapStore.worker.db.get(event.value.id);
         if (!cot) return;
 
-        const properties = { ...cot.properties };
-
-        properties.type = event.value.type;
-        properties.callsign = event.value.name;
-        properties.remarks = event.value.remarks;
-
-        if (Type2525.isNumericSIDCConvertable(event.value.type)) {
-            properties.milicon = { id: event.value.type };
-        } else {
-            delete properties.milicon;
-        }
-
-        // The derived icon sticks once set - strip it so it re-derives from
-        // the new type unless the Event style pins an explicit icon
-        if (event.value.style.icon) {
-            properties.icon = event.value.style.icon;
-        } else {
-            delete properties.icon;
-        }
-
-        if (event.value.style['marker-color'] !== undefined) {
-            properties['marker-color'] = event.value.style['marker-color'];
-        } else {
-            delete properties['marker-color'];
-        }
-
-        if (event.value.style['marker-opacity'] !== undefined) {
-            properties['marker-opacity'] = event.value.style['marker-opacity'];
-        } else {
-            delete properties['marker-opacity'];
-        }
-
-        await cot.update({ properties });
+        await cot.update({ properties: entityMarkerProperties(cot.properties, event.value) });
     } catch (err) {
         console.error(`Failed to sync Event ${event.value.id} to its map feature:`, err);
     }
@@ -765,3 +710,9 @@ async function deleteEvent(): Promise<void> {
 }
 </script>
 
+
+<style scoped>
+.entity-actions :deep(svg) {
+    display: block;
+}
+</style>

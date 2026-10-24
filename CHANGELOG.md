@@ -25,6 +25,63 @@
 
 ### Pending Release
 
+- :bug: `API` Mission file uploads (`POST /api/marti/missions/:guid/upload`) of text, XML, JSON & `application/octet-stream` files reached TAK Server as empty bodies and were rejected - the global body parsers consumed the raw request stream before it could be forwarded
+- :rocket: `API` `POST /api/marti/missions/:guid/upload` now accepts a `multipart/form-data` upload like every other file route - the file is staged on disk so TAK Server receives the required `Content-Length`; the `name` query param is now an optional override of the form file name
+- :rocket: `UI` Mission file uploads use the standard multipart upload flow
+- :bug: `UI` Failed Mission file uploads show the API error message instead of the bare HTTP status text
+
+### v13.113.0 - 2026-10-22
+
+- :rocket: Core Events & Devices are broadcast as CoT at most once every 10s per Entity - a create or update is still sent immediately unless that Entity was broadcast within the last 10s, in which case the next scheduled sweep carries it
+- :rocket: `POST /api/core/device` mirrors `POST /api/core/event` - `channels` is required for users and a Connection or Layer token that omits it shares the Device with the active Channels of its Connection, so machine-created Devices are broadcast to the map instead of sitting unshared
+- :rocket: `PATCH /api/core/device/:device` mirrors the Event API - `channels` can no longer be cleared, and a Device of a Connection that has no Channels inherits the active Channels of its Connection on its next PATCH so previously unshared Devices reach the map
+- :rocket: `PATCH /api/core/event/:event` fills in the active Channels of the Connection for an Event of a Connection that has none, the same as Devices
+- :rocket: Connection & Layer tokens can read a Device shared with an active Channel of their Connection, the same rule Events already followed - editing still requires the creator
+- :rocket: Access control and Channel sharing for Core Events & Devices is shared through one `EntityControl` instead of separate Event & Device control classes
+
+### v13.112.3 - 2026-10-21
+
+- :Bug: Centralize read/write operations to avoid overlay positional drift between Dexie and MapLibre
+
+### v13.112.2 - 2026-10-21
+
+- :tada: Certificate metadata returned by the Server, Connection & User APIs now includes `channels` - whether TAK Server signed the certificate with the channels Extended Key Usage (OID `1.2.840.113549.1.9.7`); certificates without it have their channel selection ignored by TAK Server. The Connection card, Server settings, Admin Overview, Admin User page, and the Admin Users list show the state as a `Channels` / `No Channels` badge
+- :white_check_mark: Queue mock TAK Server writes for streaming connections still completing their TLS handshake so chat and reconnect tests no longer race the server-side `secureConnection` event under Node 26.12.1
+- :bug: Install `gdal-driver-all` in the events task image - Alpine splits GDAL drivers into subpackages and the Parquet and PDF drivers the task uses were missing
+- :rocket: Install Node.js in the API image from the official `node:26-alpine3.24` image instead of Alpine's `nodejs-current` package so security releases (October 2026: Brotli RCE, TLS hostname bypass) ship as soon as upstream publishes them
+- :rocket: Build the events task on `node:26-alpine3.24` with GDAL 3.13.3 from Alpine 3.24 packages instead of the `osgeo/gdal` Alpine 3.23 image
+- :bug: `PATCH /api/basemap/:basemapid` no longer defaults `scope` to `user` or `tilesize` to `256` when omitted, so editing a single field of a Server scoped basemap keeps it Server scoped (#1947)
+
+### v13.112.1 - 2026-10-21
+
+- :bug: Send `Cache-Control: no-store` from the nginx SPA fallback so browsers never heuristically cache `index.html` under a misrouted path (#1949)
+- :bug: The mobile app is only able to show the SPA at this time and navigation events to other pages result in an ugly reload. Hide all nav elements that nav to other parts of the web app - IE Board/Video/Admin etc when on mobile
+
+### v13.112.0 - 2026-10-21
+
+- :tada: Add a Devices menu listing Core Devices from the Device API, falling back to the Device markers already on the map when offline
+- :tada: Add a Core Device sidebar for viewing and editing a Device, reached from a Device marker the same way Events are
+- :rocket: Open the Core Device a marker was generated from when clicking a Device CoT, with the same offline fallback Events have, and sync dragged Device markers back to the Device API
+- :rocket: Broadcast Core Devices with a `p` Link of type `core-device` carrying the Device UUID so clients can open the Device a marker was generated from
+
+### v13.111.3 - 2026-10-20
+
+- :rocket: Allow global search to search through remarks field
+
+### v13.111.2 - 2026-10-20
+
+- :bug: FeatureServer basemap tiles derive the Esri quantization tolerance from the tile zoom (one unit per 4096th of the tile width) instead of a fixed 0.001 degrees - the fixed value snapped geometry to a ~100m grid and collapsed most parcels once tiles were requested as Esri JSON, which honours quantization where `f=geojson` ignored it
+- :bug: Badges that relied on the default white badge text (Layer & Token permissions, basemap type selector, settings permissions, etc.) now use the theme body color so they are legible in light mode
+- :tada: Links section shows `r-u` links to images (by mime or URL extension) as thumbnails loaded through the `/api/proxy/image` API
+
+### v13.111.1 - 2026-10-18
+
+- :arrow_up: Update `@tak-ps/maplibre-gl` to 6.15.0 (upstream MapLibre 6.15.0 with the worker restart fork)
+- :rocket: Mouse drag rotate & pitch now turn the map around the point under the pointer (`dragRotate: { around: 'pointer' }`) instead of the map center
+- :tada: Layer environment inputs carrying an `@widget: type` hint are edited with the MIL-STD-2525E type picker (requires the pending vue-tabler `TablerSchema` widget slot)
+- :rocket: User rows in feature lists (Search Box, Mission Layers, etc.) use the same `FeatureRow` layout and height as other features, with the team puck in the icon slot and team/role as the subtitle
+- :bug: FeatureServer basemaps now request Esri JSON and nest polygon holes themselves - ArcGIS `f=geojson` flattened multipart holes into standalone polygons, which rendered as double-filled shapes instead of cutouts
+
 ### v13.111.0 - 2026-10-16
 
 - :rocket: Surface Overlays in Search Box
