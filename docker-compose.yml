@@ -24,6 +24,12 @@ services:
             - POSTGRES=${POSTGRES}
             - API_URL=${API_URL}
             - PMTILES_URL=${PMTILES_URL}
+            # ETL Layers deployed as AWS Lambdas - leave unset to run without AWS. The access key
+            # is a least-privilege IAM user, see etl-caltopo deploy/cloudtak-etl.yml
+            - AWS_REGION=${AWS_REGION:-us-east-1}
+            - ECR_TASKS_REPOSITORY_NAME=${ECR_TASKS_REPOSITORY_NAME:-}
+            - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+            - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
 
     tiles:
         build:
