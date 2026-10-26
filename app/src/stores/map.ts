@@ -13,6 +13,7 @@ import { defineStore } from 'pinia'
 import { markRaw } from 'vue';
 import DrawTool, { DrawToolMode } from './modules/draw.ts';
 import IconManager from './modules/icons.ts';
+import FontManager from './modules/fonts.ts';
 import MenuManager from './modules/menu.ts';
 import BottomBarManager from './modules/bottombar.ts';
 import { useDeviceStore, type BatteryInfo, type NativeDeliveryOptions } from './device.ts';
@@ -34,7 +35,7 @@ import { invalidateOfflinePMTiles } from './modules/pmtiles.ts';
 import { FeatureVisibility } from './modules/feature-visibility.ts';
 import Subscription from '../base/subscription.ts';
 import Filter from '../base/filter.ts';
-import { stdurl, getRuntimeToken, serverUrl } from '../std.js';
+import { getRuntimeToken, serverUrl } from '../std.js';
 import * as mapgl from 'maplibre-gl'
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import type Atlas from '../workers/atlas.ts';
@@ -1210,8 +1211,6 @@ export const useMapStore = defineStore('cloudtak', {
                 console.error('Failed to load map configuration, using defaults', err);
             }
 
-            const glyphs = `${String(stdurl('/api/fonts'))}/{fontstack}/{range}.pbf${token ? `?token=${encodeURIComponent(token)}` : ''}`;
-
             const init: mapgl.MapOptions = {
                 container: this.container,
                 hash: true,
@@ -1227,7 +1226,7 @@ export const useMapStore = defineStore('cloudtak', {
                 clickTolerance: 10,
                 style: {
                     version: 8,
-                    glyphs,
+                    'font-faces': FontManager.fontFaces(),
                     sprite: sprites,
                     state: {
                         theme: { default: useAppStore().resolvedTheme },
@@ -1390,7 +1389,7 @@ export const useMapStore = defineStore('cloudtak', {
 
             map.on('moveend', async () => {
                 if (this.draw.mode !== DrawToolMode.STATIC) {
-                    this.draw.snapping = await this.worker.db.snapping(this.map.getBounds().toArray());
+                    await this.draw.refreshSnapping();
                 } else {
                     this.draw.snapping.clear();
                 }
@@ -1749,7 +1748,7 @@ export const useMapStore = defineStore('cloudtak', {
             // background color; checked bottom-up, the base-most one wins.
             let color: PropertyValueSpecification<string> = 'hsl(47, 26%, 88%)';
 
-            for (const overlay of OverlayManager.visibleBasemaps()) {
+            for (const overlay of OverlayManager.visible('basemap')) {
                 const bg = overlay.styles.find(
                     (l): l is Extract<LayerSpecification, { type: 'background' }> => l.type === 'background'
                 );
@@ -1764,7 +1763,7 @@ export const useMapStore = defineStore('cloudtak', {
             this.map.setPaintProperty('background', 'background-color', color);
         },
         updateAttribution: async function(): Promise<void> {
-            const attributions = OverlayManager.visibleBasemaps()
+            const attributions = OverlayManager.visible('basemap')
                 .map((overlay) => overlay.attribution)
                 .filter((a): a is string => !!a);
 

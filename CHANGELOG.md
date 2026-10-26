@@ -18,6 +18,7 @@
 - ETLs in v14 will be required to declare Named Schemas, single schema support will be removed
 - The Minio Legacy Store will be removed in V14 - Ensure you have migrated to Garage before updating to v14.
 - CoreEntity single external ID support will be removed in v14 - ensure you have migrated to multi-system external IDs before updating to v14.
+- The `GET /api/fonts/:fontstack/:start-:end.pbf` glyph endpoint is deprecated and will be removed in v14 - the web app now draws labels from bundled font files via the style `font-faces` property
 
 ### Beta Notice
 
@@ -25,12 +26,27 @@
 
 ### Pending Release
 
+### v13.114.2 - 2026-10-26
+
+- :tada: Clicking on the name of the mission zooms to the mission extent
+- :rocket: Show labels next to Data Sync tabs when the sidebar is wide enough to avoid truncation, and show the tab icon only when the sidebar is narrow
+- :rocket: Only load the last 7 days of changes by default in the Mission Timeline view
+- :tada: `API` CoreEvent & CoreDevice `links` accept `tel:` URLs alongside `https://` so a marker can carry a tappable phone number - ATAK opens the `r-u` link in the dialer, which no longer carries a `text/html` mime (#1954)
+- :rocket: `UI` Core Entity `tel:` links show a phone icon and open in the current window
+
+### v13.114.1 - 2026-10-26
+
+- :rocket: Remove need to Glyphs API entirely
+
 ### v13.114.0 - 2026-10-26
 
 - :bug: `API` Mission file uploads (`POST /api/marti/missions/:guid/upload`) of text, XML, JSON & `application/octet-stream` files reached TAK Server as empty bodies and were rejected - the global body parsers consumed the raw request stream before it could be forwarded
 - :rocket: `API` `POST /api/marti/missions/:guid/upload` now accepts a `multipart/form-data` upload like every other file route - the file is staged on disk so TAK Server receives the required `Content-Length`; the `name` query param is now an optional override of the form file name
 - :rocket: `UI` Mission file uploads use the standard multipart upload flow
 - :bug: `UI` Failed Mission file uploads show the API error message instead of the bare HTTP status text
+- :rocket: `UI` Map labels are drawn from a bundled Open Sans Bold font via the style `font-faces` property instead of glyph ranges fetched from `/api/fonts`, so labels never wait on the network
+- :rocket: `UI` Background location now has its own prominent disclosure, shown immediately after the foreground location grant and again before every settings hand-off from Settings > Permissions, to satisfy the Google Play User Data policy - the shared `LocationDisclosure` component names background use ("even when the app is closed or not in use") and requires an explicit `Agree and continue`
+- :bug: `UI` On Android, Settings > Permissions showed no action for Background Location until it had been denied once, leaving users who chose "While using the app" with no way to upgrade from inside the app
 
 ### v13.113.0 - 2026-10-22
 
