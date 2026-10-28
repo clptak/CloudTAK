@@ -19,7 +19,6 @@ services:
             - SigningSecret=${SigningSecret}
             - ASSET_BUCKET=${ASSET_BUCKET}
             - AWS_S3_Endpoint=${AWS_S3_Endpoint}
-            - AWS_S3_Region=${AWS_S3_Region:-us-east-1}
             - AWS_S3_AccessKeyId=${AWS_S3_AccessKeyId}
             - AWS_S3_SecretAccessKey=${AWS_S3_SecretAccessKey}
             - POSTGRES=${POSTGRES}
@@ -44,7 +43,6 @@ services:
             - SigningSecret=${SigningSecret}
             - ASSET_BUCKET=${ASSET_BUCKET}
             - AWS_S3_Endpoint=${AWS_S3_Endpoint}
-            - AWS_S3_Region=${AWS_S3_Region:-us-east-1}
             - AWS_S3_AccessKeyId=${AWS_S3_AccessKeyId}
             - AWS_S3_SecretAccessKey=${AWS_S3_SecretAccessKey}
 
@@ -62,7 +60,6 @@ services:
             - SigningSecret=${SigningSecret}
             - ASSET_BUCKET=${ASSET_BUCKET}
             - AWS_S3_Endpoint=${AWS_S3_Endpoint}
-            - AWS_S3_Region=${AWS_S3_Region:-us-east-1}
             - AWS_S3_AccessKeyId=${AWS_S3_AccessKeyId}
             - AWS_S3_SecretAccessKey=${AWS_S3_SecretAccessKey}
 

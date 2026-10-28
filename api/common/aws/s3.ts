@@ -18,9 +18,6 @@ export default class S3 {
 
         if (process.env.AWS_S3_Endpoint) {
             config.endpoint = process.env.AWS_S3_Endpoint;
-            // Sign for the store's own region (Garage: s3_region), not AWS_REGION - that one
-            // belongs to the AWS services (ETL Lambdas) and may be a different region
-            config.region = process.env.AWS_S3_Region || 'us-east-1';
             config.forcePathStyle = true;
             config.requestChecksumCalculation = 'WHEN_REQUIRED';
             config.responseChecksumValidation = 'WHEN_REQUIRED';
