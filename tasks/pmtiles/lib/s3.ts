@@ -13,6 +13,8 @@ export default function s3client(): S3.S3Client {
 
     if (process.env.AWS_S3_Endpoint) {
         s3config.endpoint = process.env.AWS_S3_Endpoint;
+        // Sign for the store's own region (Garage: s3_region), not AWS_REGION
+        s3config.region = process.env.AWS_S3_Region || 'us-east-1';
         s3config.forcePathStyle = true;
         s3config.requestChecksumCalculation = 'WHEN_REQUIRED';
         s3config.responseChecksumValidation = 'WHEN_REQUIRED';
