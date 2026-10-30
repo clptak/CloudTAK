@@ -6,8 +6,8 @@ export default function s3client(): S3.S3Client {
     const s3config: S3.S3ClientConfig = {
         region: process.env.AWS_REGION || 'us-east-1',
         requestHandler: new NodeHttpHandler({
-            connectionTimeout: 500,
-            socketTimeout: 500,
+            connectionTimeout: 5000,
+            socketTimeout: 120000,
         }),
     };
 
