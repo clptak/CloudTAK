@@ -27,7 +27,13 @@
 
 ### Pending Release
 
+- :bug: Data Sync "Remove User" now removes the target subscriber (via a role-less TAK Server `PUT .../role`) instead of silently unsubscribing only the caller's own session; the button is gated on `MISSION_SET_ROLE` and failures are shown in the Users list (#2010)
+
+### v13.119.0 - 2026-11-03
+
+- :tada: Introduce new Appearance Menu
 - :rocket: Circle mode now snaps the center point to nearby feature vertices using the Terra-Draw 1.39.0 circle snapping options
+- :bug: Data Sync invite list hides current subscribers and pending invitees, re-inviting shows the server error instead of failing silently (#2009)
 
 ### v13.118.1 - 2026-11-02
 

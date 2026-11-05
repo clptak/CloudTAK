@@ -60898,6 +60898,7 @@ export interface paths {
                             symbolsets: {
                                 id: string;
                                 name: string;
+                                count: number;
                             }[];
                             items: {
                                 sidc: string;

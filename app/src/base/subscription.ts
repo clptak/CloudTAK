@@ -567,7 +567,7 @@ export default class Subscription {
             }
         });
 
-        if (error) throw new Error('Failed to invite user to mission');
+        if (error) throw new Error(error.message || 'Failed to invite user to mission');
     }
 
     async changeRole(sub: { clientUid: string, username: string }, role: MissionRoleType): Promise<void> {
@@ -615,13 +615,15 @@ export default class Subscription {
     }
 
     async removeUser(uid: string): Promise<void> {
-        await server.DELETE('/api/marti/missions/{:guid}/user', {
+        const { error } = await server.DELETE('/api/marti/missions/{:guid}/user', {
             params: {
                 path: { ':guid': this.guid },
                 query: { uid }
             },
             headers: Subscription.headers(this.missiontoken)
         });
+
+        if (error) throw new Error('Failed to remove user');
     }
 
     async subscriptions(): Promise<MissionSubscriptions> {
