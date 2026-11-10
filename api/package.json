@@ -1,7 +1,7 @@
 {
     "name": "@tak-ps/CloudTAK.api",
     "type": "module",
-    "version": "13.122.1",
+    "version": "13.122.4",
     "description": "Facilitate ETL operations to bring non-TAK sources into a TAK Server",
     "main": "index.js",
     "scripts": {
@@ -55,7 +55,7 @@
         "@simplewebauthn/server": "^14.0.1",
         "@sinclair/typebox": "^0.34.52",
         "@tak-ps/etl": "^11.1.0",
-        "@tak-ps/node-cot": "^14.57.0",
+        "@tak-ps/node-cot": "^14.59.0",
         "@tak-ps/node-safeurl": "^1.5.0",
         "@tak-ps/node-tak": "^12.36.0",
         "@turf/bbox": "^7.1.0",
