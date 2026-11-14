@@ -4,6 +4,10 @@ import eslintPluginVue from 'eslint-plugin-vue';
 import ts from 'typescript-eslint';
 
 export default ts.config(
+    {
+        // Third-party plugin code copied in at build time; don't let it gate the build
+        ignores: ['plugins/rubbersheet/**']
+    },
     js.configs.recommended,
     ...ts.configs.recommended,
     ...eslintPluginVue.configs['flat/recommended'],
