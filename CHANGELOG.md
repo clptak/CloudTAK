@@ -27,6 +27,30 @@
 
 ### Pending Release
 
+### v13.124.0 - 2026-11-17
+
+- :arrow_up: Migrate to TS7 for blazing build times - `tsc` is TypeScript 7.0 via `@typescript/native`, tools that need the compiler API (ESLint, `vue-tsc`, TypeDoc) stay on the TypeScript 6 API
+- :arrow_up: Migrate the API off ESLint onto OXLint for blazing lint times
+- :bug: Fix numerous small bugs in the codebase surfaced by OXLint
+- :bug: Paging verification codes are accepted for one 30 second period either side of the current one - the tolerance was never applied, so a code expired at the end of the period it was sent in
+
+### v13.123.2 - 2026-11-17
+
+- :bug: Generate Links that are valid in ATAK
+
+### v13.123.1 - 2026-11-16
+
+- :rocket: Consolidate Permissions
+- :bug: Rectify Mission Changes API call body against TAK Server generated schema
+
+### v13.123.0 - 2026-11-16
+
+- :tada: `API` Core Devices accept a `stale` number of seconds - the Device is no longer broadcast to TAK clients once that long has passed since it was last updated, until its next update. The value is stored on the Core Entity so other kinds can adopt it
+- :rocket: `API` A Core Device without a `stale` is broadcast with a 30 second stale time in place of 30 minutes, so a Device that loses its location or is deleted drops from TAK clients promptly
+- :rocket: `API` Route `security` declarations are now enforced by `@openaddresses/batch-schema` before a request body is parsed or validated - a route without a declaration accepts users only, and every route that accepts Layer, Connection or other resource tokens, a `token` query parameter, or requires a System Administrator declares it via `Auth.security()`
+- :rocket: `API` The token of a request is parsed once and shared by every `Auth` call of a route handler
+- :rocket: `API` An unauthenticated request now receives its `401` before any validation error, with a `WWW-Authenticate` header
+
 ### v13.122.8 - 2026-11-10
 
 - :rocket: Display and allow filtering by Layer ID
