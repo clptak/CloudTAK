@@ -76,6 +76,12 @@ export function buildAuthentikHeaders(profile: InferSelectModel<typeof Profile>)
     };
 }
 
+function queryText(value: unknown): string | undefined {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') return String(value);
+    return undefined;
+}
+
 export async function forwardTakPortalLocateRequest(input: {
     method: string;
     subpath: string;
@@ -93,12 +99,15 @@ export async function forwardTakPortalLocateRequest(input: {
     const url = new URL(`${getTakPortalInternalBase()}${LOCATE_API_PREFIX}${subpath}`);
 
     for (const [key, value] of Object.entries(input.query || {})) {
-        if (value === undefined || value === null) continue;
         if (Array.isArray(value)) {
-            for (const item of value) url.searchParams.append(key, String(item));
-        } else {
-            url.searchParams.set(key, String(value));
+            for (const item of value) {
+                const text = queryText(item);
+                if (text !== undefined) url.searchParams.append(key, text);
+            }
+            continue;
         }
+        const text = queryText(value);
+        if (text !== undefined) url.searchParams.set(key, text);
     }
 
     const headers = buildAuthentikHeaders(input.profile);

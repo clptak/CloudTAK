@@ -6,15 +6,20 @@ import Auth from '../../common/auth.js';
 import type ConfigStateless from '../config.js';
 import { forwardTakPortalLocateRequest } from '../lib/takportal-locate-bridge.js';
 
-type AuthRequest = Parameters<typeof Auth.as_profile>[1];
+type LocateRequest = {
+    method: string;
+    query: unknown;
+    body?: unknown;
+    headers: { 'content-type'?: string | string[] };
+};
 
 async function bridgeLocate(
     config: ConfigStateless,
-    req: AuthRequest,
+    req: LocateRequest,
     res: Response,
     subpath: string,
 ): Promise<void> {
-    const profile = await Auth.as_profile(config, req);
+    const profile = await Auth.as_profile(config, req as unknown as Parameters<typeof Auth.as_profile>[1]);
     const result = await forwardTakPortalLocateRequest({
         method: req.method,
         subpath,
@@ -46,7 +51,7 @@ export default async function router(schema: Schema, config: ConfigStateless) {
         res: Type.Any(),
     }, async (req, res) => {
         try {
-            await bridgeLocate(config, req as AuthRequest, res, '/meta');
+            await bridgeLocate(config, req, res, '/meta');
         } catch (err) {
             Err.respond(err, res);
         }
@@ -61,7 +66,7 @@ export default async function router(schema: Schema, config: ConfigStateless) {
         res: Type.Any(),
     }, async (req, res) => {
         try {
-            await bridgeLocate(config, req as AuthRequest, res, '/missions');
+            await bridgeLocate(config, req, res, '/missions');
         } catch (err) {
             Err.respond(err, res);
         }
@@ -73,7 +78,7 @@ export default async function router(schema: Schema, config: ConfigStateless) {
         res: Type.Any(),
     }, async (req, res) => {
         try {
-            await bridgeLocate(config, req as AuthRequest, res, '/locators');
+            await bridgeLocate(config, req, res, '/locators');
         } catch (err) {
             Err.respond(err, res);
         }
@@ -86,7 +91,7 @@ export default async function router(schema: Schema, config: ConfigStateless) {
         res: Type.Any(),
     }, async (req, res) => {
         try {
-            await bridgeLocate(config, req as AuthRequest, res, '/locators');
+            await bridgeLocate(config, req, res, '/locators');
         } catch (err) {
             Err.respond(err, res);
         }
@@ -100,7 +105,7 @@ export default async function router(schema: Schema, config: ConfigStateless) {
         res: Type.Any(),
     }, async (req, res) => {
         try {
-            await bridgeLocate(config, req as AuthRequest, res, `/locators/${encodeURIComponent(req.params.id)}`);
+            await bridgeLocate(config, req, res, `/locators/${encodeURIComponent(req.params.id)}`);
         } catch (err) {
             Err.respond(err, res);
         }
@@ -113,7 +118,7 @@ export default async function router(schema: Schema, config: ConfigStateless) {
         res: Type.Any(),
     }, async (req, res) => {
         try {
-            await bridgeLocate(config, req as AuthRequest, res, `/locators/${encodeURIComponent(req.params.id)}`);
+            await bridgeLocate(config, req, res, `/locators/${encodeURIComponent(req.params.id)}`);
         } catch (err) {
             Err.respond(err, res);
         }
@@ -126,7 +131,7 @@ export default async function router(schema: Schema, config: ConfigStateless) {
         res: Type.Any(),
     }, async (req, res) => {
         try {
-            await bridgeLocate(config, req as AuthRequest, res, `/locators/${encodeURIComponent(req.params.id)}/archive`);
+            await bridgeLocate(config, req, res, `/locators/${encodeURIComponent(req.params.id)}/archive`);
         } catch (err) {
             Err.respond(err, res);
         }
@@ -139,7 +144,7 @@ export default async function router(schema: Schema, config: ConfigStateless) {
         res: Type.Any(),
     }, async (req, res) => {
         try {
-            await bridgeLocate(config, req as AuthRequest, res, `/locators/${encodeURIComponent(req.params.id)}/reactivate`);
+            await bridgeLocate(config, req, res, `/locators/${encodeURIComponent(req.params.id)}/reactivate`);
         } catch (err) {
             Err.respond(err, res);
         }
@@ -152,7 +157,7 @@ export default async function router(schema: Schema, config: ConfigStateless) {
         res: Type.Any(),
     }, async (req, res) => {
         try {
-            await bridgeLocate(config, req as AuthRequest, res, `/locators/${encodeURIComponent(req.params.id)}/manual-ping`);
+            await bridgeLocate(config, req, res, `/locators/${encodeURIComponent(req.params.id)}/manual-ping`);
         } catch (err) {
             Err.respond(err, res);
         }
@@ -165,7 +170,7 @@ export default async function router(schema: Schema, config: ConfigStateless) {
         res: Type.Any(),
     }, async (req, res) => {
         try {
-            await bridgeLocate(config, req as AuthRequest, res, `/locators/${encodeURIComponent(req.params.id)}/report.pdf`);
+            await bridgeLocate(config, req, res, `/locators/${encodeURIComponent(req.params.id)}/report.pdf`);
         } catch (err) {
             Err.respond(err, res);
         }
@@ -181,7 +186,7 @@ export default async function router(schema: Schema, config: ConfigStateless) {
         res: Type.Any(),
     }, async (req, res) => {
         try {
-            await bridgeLocate(config, req as AuthRequest, res, `/locators/${encodeURIComponent(req.params.id)}/history`);
+            await bridgeLocate(config, req, res, `/locators/${encodeURIComponent(req.params.id)}/history`);
         } catch (err) {
             Err.respond(err, res);
         }
@@ -195,7 +200,7 @@ export default async function router(schema: Schema, config: ConfigStateless) {
         res: Type.Any(),
     }, async (req, res) => {
         try {
-            await bridgeLocate(config, req as AuthRequest, res, `/locators/${encodeURIComponent(req.params.id)}/send-link-sms`);
+            await bridgeLocate(config, req, res, `/locators/${encodeURIComponent(req.params.id)}/send-link-sms`);
         } catch (err) {
             Err.respond(err, res);
         }
