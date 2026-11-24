@@ -1423,7 +1423,10 @@ export const useMapStore = defineStore('cloudtak', {
             // @ts-ignore Don't remove me unless npm run doc passes
             this._map = markRaw(map);
             this._draw = markRaw(new DrawTool(this));
-            this._icons = markRaw(new IconManager(map));
+            this._icons = markRaw(new IconManager(map, {
+                syncIcons: () => this.worker.sync.syncIcons(),
+                syncIconset: (uid) => this.worker.sync.syncIconset(uid)
+            }));
             this._menu = markRaw(new MenuManager(this));
             this.loadingStage = 'Building menus…';
             await (this._menu as MenuManager).init();
@@ -1703,21 +1706,25 @@ export const useMapStore = defineStore('cloudtak', {
          * originating client's change is not echoed back to the API.
          */
         reconcileOverlays: async function(): Promise<void> {
-            if (this._overlayReconcile) {
-                this._overlayReconcileQueued = true;
-                return this._overlayReconcile;
-            }
+            this._overlayReconcileQueued = true;
+            if (this._overlayReconcile) return this._overlayReconcile;
 
-            this._overlayReconcile = (async () => {
-                do {
-                    this._overlayReconcileQueued = false;
-                    await this.reconcileOverlaysOnce();
-                } while (this._overlayReconcileQueued);
-            })().finally(() => {
-                this._overlayReconcile = undefined;
-            });
+            let settled = false;
+            const run = (async () => {
+                try {
+                    while (this._overlayReconcileQueued) {
+                        this._overlayReconcileQueued = false;
+                        await this.reconcileOverlaysOnce();
+                    }
+                } finally {
+                    settled = true;
+                    this._overlayReconcile = undefined;
+                }
+            })();
 
-            return this._overlayReconcile;
+            if (!settled) this._overlayReconcile = run;
+
+            return run;
         },
         /**
          * Mark a mission subscription as unsubscribed when its overlay no

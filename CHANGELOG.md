@@ -12,14 +12,7 @@
 
 ### Deprecation Notices
 
-- `GET /api/search/reverse/:long/:lat` endpoint is deprecated and will be removed in v14, use `GET /api/search/reverse/:long/:lat/<type>` instead
 - `Layer.template` is deprecated and will be removed
-- The `external_id` string on CoreEvent & CoreDevice requests & responses is deprecated and will be removed in v14, use `external_id: { system, value }` on requests and `external_ids` on responses
-- ETLs in v14 will be required to declare Named Schemas, single schema support will be removed
-- The Minio Legacy Store will be removed in V14 - Ensure you have migrated to Garage before updating to v14.
-- CoreEntity single external ID support will be removed in v14 - ensure you have migrated to multi-system external IDs before updating to v14.
-- The `GET /api/fonts/:fontstack/:start-:end.pbf` glyph endpoint is deprecated and will be removed in v14 - the web app now draws labels from bundled font files via the style `font-faces` property
-- The `GET /api/basemap/:basemapid/tiles` and `GET /api/basemap/:basemapid/tiles/:z/:x/:y` proxy routes are deprecated and will be removed in v14 - basemap TileJSON and tiles are served by the PMTiles tile server at `/tiles/basemap/:basemapid/tiles[/:z/:x/:y]`
 
 ### Beta Notice
 
@@ -27,7 +20,41 @@
 
 ### Pending Release
 
-### Context
+### v14.0.1 - 2026-11-23
+
+- :bug: Fix issue where Data Sync add content would race the content itself, resulting in data sync content potentially being added to the personal feature store - Closes: https://github.com/dfpc-coe/CloudTAK/issues/1813 Closes: https://github.com/dfpc-coe/CloudTAK/issues/1882
+- :rocket: UI Improvements for point dropper - Closes: https://github.com/dfpc-coe/CloudTAK/issues/2061
+- :rocket: Allow PATCHing admin incoming/outgoing config - Closes: https://github.com/dfpc-coe/CloudTAK/issues/2042
+
+### v14.0.0 - 2026-11-22
+
+> [!WARNING]
+> This release requires ETLs to be on ETL-Base v11 or higher
+> Minio Docker must be migrated to garage before upgrading to v14
+
+- :rocket: **Breaking** Remove the `GET /api/search/reverse/:long/:lat` endpoint - use the per-type `GET /api/search/reverse/:long/:lat/<sun|magnetic|weather|reverse|elevation>` endpoints
+- :rocket: **Breaking** Remove the `GET /api/fonts/:fontstack/:start-:end.pbf` glyph endpoint and the bundled API glyph files - the web app draws labels from bundled font files via the style `font-faces` property and no longer caches glyphs in the service worker
+- :rocket: **Breaking** Remove the `GET /api/basemap/:basemapid/tiles` and `GET /api/basemap/:basemapid/tiles/:z/:x/:y` proxy routes along with the API side tile proxying code - basemap TileJSON and tiles are served by the PMTiles tile server at `/tiles/basemap/:basemapid/tiles[/:z/:x/:y]`, the web app resolves `/api/basemap/:id/tiles` overlay URLs against the tile server
+- :rocket: **Breaking** Remove the deprecated `external_id` string from CoreEvent & CoreDevice requests & responses - send `external_id: { system, value }` and read `external_ids`; Layer Maps saved with the pre-system bare string `external_id` form are no longer accepted
+- :rocket: **Breaking** Task Capabilities must declare Named Output schemas - a Task returning a single unnamed Output schema is rejected with a 400
+- :rocket: **Breaking** Remove the legacy MinIO store - the `minio-legacy` & `migrate` Docker Compose services and `./cloudtak.sh migrate-store` are gone, `start` & `update` refuse to run while `.docker-store` exists until it is migrated with a v13 checkout
+
+### v13.128.0 - 2026-11-22
+
+- :tada: Add a `variant` query parameter to the `GET /api/iconset/:iconset?format=zip` export: `tak` (default) converts every icon to PNG for TAK clients, `cloudtak` keeps the original files including SVGs
+- :tada: Iconset download button is now a dropdown offering "TAK Compatible" or "Full CloudTAK" exports
+- :bug: Iconset zip exports are no longer truncated at 1,000 icons
+- :bug: Icons referenced with an `.svg` extension now resolve from the offline icon cache instead of relying on a network fallback
+- :rocket: Consolidate icon key normalisation, icon API calls, built-in sprite caching and iconset resync behind the `Icon`, `Sprite` and `IconManager` modules
+- :rocket: Share iconset and icon listing between the icon pickers via a `useIconsetIcons` composable
+- :white_check_mark: Add tests for the full CloudTAK iconset export and icon key normalisation
+- :bug: Fix the Data Sync Invite QR Code showing a broken image for password protected Data Syncs (#2032)
+- :bug: Fix a newly created Data Sync occasionally reporting "Overlay was created but could not be loaded"
+- :rocket: Move Data Sync creation from a modal to a `New Data Sync` menu sidebar
+- :rocket: Allow retrying the map load of a newly created Data Sync without creating it a second time
+- :rocket: The login token is no longer included in the Invite QR Code image URL
+- :rocket: Migrate the PMTiles, Events & Retention tasks from ESLint to OXLint to match the API
+- :arrow_up: Update PMTiles `@maplibre/geojson-vt` to v7
 
 ### v13.127.0 - 2026-11-21
 
